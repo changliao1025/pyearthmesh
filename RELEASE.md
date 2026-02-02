@@ -135,24 +135,24 @@ PyPI does not allow overwriting existing versions:
 After a successful release:
 
 1. Verify the package on PyPI: https://pypi.org/project/pyearthmesh/
-2. Test installation: `pip install pyea
-3. Update documentation if 
+2. Test installation: `pip install pyearthmesh`
+3. Update documentation if any user-facing changes were introduced
 
 
 ## Version
 
 Follow [Semantic Versioning](https://semver.org/):
 - MAJOR version for incompatible API changes
-- 
+- MINOR version for adding functionality in a backwards-compatible manner
+- PATCH version for backwards-compatible bug fixes
 
-
-Example: `1.2.3
+Example: `1.2.3`
 
 ## Files Involved in Release
 
-- `
+- `RELEASE.md` - This release guide
 - `pyearthmesh/__init__.py` - Package version
-- `MANIFEST.in` - Files 
+- `MANIFEST.in` - Files included in the source distribution
 - `.github/workflows/release.yml` - Automated release workflow
-- 
+- `pyproject.toml` or `setup.cfg` - Build configuration and package metadata
 - `LICENSE` - Package license
