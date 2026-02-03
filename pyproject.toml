@@ -62,9 +62,6 @@ Documentation = "https://pyearthmesh.readthedocs.io"
 Repository = "https://github.com/changliao1025/pyearthmesh"
 Issues = "https://github.com/changliao1025/pyearthmesh/issues"
 
-[tool.setuptools]
-packages = ["pyearthmesh"]
-
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["pyearthmesh*"]
