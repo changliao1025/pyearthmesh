@@ -19,9 +19,9 @@ sWorkspace_coastline_output = os.path.join(sWorkspace_output, 'coastline')
 if not os.path.exists(sWorkspace_coastline_output):
     os.makedirs(sWorkspace_coastline_output)
 
-sFilename_mesh_new = os.path.join(sWorkspace_output, "isea3h_mesh_fixed.geoparquet")
-sFilename_mesh_land_out = os.path.join(sWorkspace_output, "isea3h_mesh_land.geoparquet")
-sFilename_mesh_touch_out = os.path.join(sWorkspace_output, "isea3h_mesh_touch.geoparquet")
+sFilename_mesh_new = os.path.join(sWorkspace_output, "isea3h_mesh_fixed.parquet")
+sFilename_mesh_land_out = os.path.join(sWorkspace_output, "isea3h_mesh_land.parquet")
+sFilename_mesh_touch_out = os.path.join(sWorkspace_output, "isea3h_mesh_touch.parquet")
 
 #prepare coastline for cutting isea3h mesh
 sFilename_naturalearth = os.path.join(sWorkspace_coastline_output, 'land_ocean_mask_naturalearth.geojson')

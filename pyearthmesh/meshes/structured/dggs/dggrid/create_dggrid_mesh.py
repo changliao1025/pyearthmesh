@@ -176,6 +176,7 @@ def create_dggrid_mesh(
     sFilename_mesh,
     sWorkspace_output,  # for dggrid
     iResolution_index_in=None,
+    max_cells_per_output_file = 0,
     sDggrid_type_in=None,
     iFlag_antarctic_in=None,
     iFlag_arctic_in=None,
@@ -236,7 +237,7 @@ def create_dggrid_mesh(
 
         sLine = "update_frequency 10000000" + "\n"
         ofs.write(sLine)
-        sLine = "cell_output_gdal_format Parquet" + "\n"
+        sLine = "cell_output_gdal_format GPKG" + "\n"
         ofs.write(sLine)
         sLine = "cell_output_type GDAL" + "\n"
         ofs.write(sLine)

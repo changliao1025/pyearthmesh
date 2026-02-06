@@ -14,8 +14,8 @@ if not os.path.exists(sWorkspace_output):
     os.makedirs(sWorkspace_output)
 
 sFilename_mesh = os.path.join(sWorkspace_output, "isea3h_mesh.geojson")
-#convert to geoparquet for faster read/write
-sFilename_mesh_parquet = os.path.join(sWorkspace_output, "isea3h_mesh.geoparquet")
+#convert to parquet for faster read/write
+sFilename_mesh_parquet = os.path.join(sWorkspace_output, "isea3h_mesh.parquet")
 print(sFilename_mesh_parquet)
 
 create_isea_mesh(dResolution_meter,
@@ -24,7 +24,7 @@ create_isea_mesh(dResolution_meter,
         sWorkspace_output,)
 
 convert_vector_format(sFilename_mesh, sFilename_mesh_parquet, use_ogr2ogr = True)
-sFilename_mesh_new = os.path.join(sWorkspace_output, "isea3h_mesh_fixed.geoparquet")
+sFilename_mesh_new = os.path.join(sWorkspace_output, "isea3h_mesh_fixed.parquet")
 sFilename_mesh_new = check_mesh_quality( sFilename_mesh_parquet )
 
 print("Finished creating isea3h mesh at resolution " + sResoluton)

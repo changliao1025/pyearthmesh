@@ -13,20 +13,20 @@ __author__ = "Chang Liao"
 __email__ = "changliao.climate@gmail.com"
 
 # Import main classes
-from pyearthmesh.classes.vertex import Vertex
-from pyearthmesh.classes.edge import Edge
-from pyearthmesh.classes.meshcell import MeshCell
-from pyearthmesh.classes.hexagon import Hexagon
-from pyearthmesh.classes.square import Square
-from pyearthmesh.classes.latlon import LatLon
-from pyearthmesh.classes.link import Link
+from pyearthmesh.classes.vertex import pyvertex
+from pyearthmesh.classes.edge import pyedge
+from pyearthmesh.classes.meshcell import pymeshcell
+from pyearthmesh.classes.hexagon import pyhexagon
+from pyearthmesh.classes.square import pysquare
+from pyearthmesh.classes.latlon import pylatlon
+from pyearthmesh.classes.link import pycelllink
 
 __all__ = [
-    "Vertex",
-    "Edge",
-    "MeshCell",
-    "Hexagon",
-    "Square",
-    "LatLon",
-    "Link",
+    "pyvertex",
+    "pyedge",
+    "pymeshcell",
+    "pyhexagon",
+    "pysquare",
+    "pylatlon",
+    "pycelllink",
 ]

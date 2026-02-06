@@ -68,7 +68,8 @@ def check_geometry_validity(
         bool: True if all geometries are valid, False otherwise
     """
     try:
-        pDataset = ogr.Open(sFilename_source_mesh, 0)  # Read-only
+        # Use gdal.OpenEx for better format support (especially GeoParquet)
+        pDataset = ogr.Open(sFilename_source_mesh, 0)
         if pDataset is None:
             logger.error(f"Failed to open file: {sFilename_source_mesh}")
             return False
@@ -328,9 +329,8 @@ def fix_mesh_longitude_range_and_idl_crossing(
     pDataset_out = None
 
     try:
-        # Open source dataset
-        pDriver = get_vector_driver_from_filename(sFilename_in)
-        pDataset = pDriver.Open(sFilename_in, 0)
+        # Open source dataset - use gdal.OpenEx for better format support (e.g., GeoParquet)
+        pDataset = ogr.Open(sFilename_in, 0)
         if pDataset is None:
             logger.error(f"Could not open input file: {sFilename_in}")
             return False

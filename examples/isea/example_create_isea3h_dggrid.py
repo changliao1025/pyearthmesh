@@ -17,11 +17,11 @@ sWorkspace_output_dggrid = os.path.join(sWorkspace_output, 'dggrid')
 if not os.path.exists(sWorkspace_output_dggrid):
     os.makedirs(sWorkspace_output_dggrid)
 
-sFilename_mesh_base = "isea3h_mesh.geoparquet"
-sFilename_mesh = os.path.join(sWorkspace_output, sFilename_mesh_base)
+sFilename_mesh_base = "isea3h_mesh.GPKG" #or GPKG
+sFilename_mesh = os.path.join(sWorkspace_output_dggrid, sFilename_mesh_base)
 
-#convert to geoparquet for faster read/write
-sFilename_mesh_parquet = os.path.join(sWorkspace_output, "isea3h_mesh.geoparquet")
+#convert to parquet for faster read/write
+sFilename_mesh_parquet = os.path.join(sWorkspace_output_dggrid, "isea3h_mesh.GPKG")
 print(sFilename_mesh_parquet)
 iFlag_global = 1
 iFlag_save_mesh= 1
@@ -41,7 +41,7 @@ create_dggrid_mesh(iFlag_global,
     sDggrid_type_in='ISEA3H')
 
 #convert_vector_format(sFilename_mesh, sFilename_mesh_parquet, use_ogr2ogr = True)
-sFilename_mesh_new = os.path.join(sWorkspace_output, "isea3h_mesh_fixed.geoparquet")
+sFilename_mesh_new = os.path.join(sWorkspace_output, "isea3h_mesh_fixed.GPKG")
 sFilename_mesh_new = check_mesh_quality( sFilename_mesh_parquet )
 
 print("Finished creating isea3h mesh at resolution " + sResoluton)
