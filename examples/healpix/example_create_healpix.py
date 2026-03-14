@@ -7,10 +7,10 @@ from pyearthmesh.meshes.structured.dggs.healpix.create_healpix_mesh import creat
 from pyearthmesh.utility.mesh_utility import check_mesh_quality
 from pyearthmesh.meshes.structured.dggs.convert_vector_format_multi_tile import convert_vector_format_multi_tile
 
-dResolution_meter = 10000  #1 km
+dResolution_meter = 1000  #1 km
 iFlag_create_mesh = 0
 iFlag_use_tiles = 1
-case_index = 1
+case_index = 2
 sFilename_mesh = "healpix_mesh.parquet"
 #get extension using the filename only
 sExtension_mesh = os.path.splitext(sFilename_mesh)[1].lower()

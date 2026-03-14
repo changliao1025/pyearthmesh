@@ -18,5 +18,6 @@ create_coastline_buffer(dThreshold_area_island,
                         dDistance_buffer_meter,
                         sFilename_out,
                         iFlag_antarctic_in=0,
+                        iFlag_simplify_in=1,  # Dissolve overlapping buffers
                         iFlag_verbose_in=1,
                         sResolution_nature_earth_coastline_in = sResolution_nature_earth_coastline )
