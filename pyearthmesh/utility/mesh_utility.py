@@ -1,7 +1,4 @@
-from pyearth.gis.geometry.extract_unique_vertices_and_connectivity import (
-    extract_unique_vertices_and_connectivity,
-)
-from pyearth.gis.geometry.calculate_polygon_area import calculate_polygon_area
+
 from pyearth.gis.geometry.international_date_line_utility import (
     split_international_date_line_polygon_coordinates,
     check_cross_international_date_line_polygon,
@@ -419,6 +416,12 @@ def fix_mesh_longitude_range_and_idl_crossing(
 
             for pFeature in pLayer:
                 try:
+                    #481245 cell id for debug
+                    #cellid = pFeature.GetField("cellid")
+                    #if cellid == 481245:
+                    #    print("debug: found cell 481245 for IDL crossing check")
+                    #else:
+                    #    continue
                     geometry = pFeature.GetGeometryRef()
                     if geometry is None:
                         logger.warning(
@@ -443,7 +446,7 @@ def fix_mesh_longitude_range_and_idl_crossing(
                         if polygon_includes_pole(aCoord, pole="south", include_boundary=True) \
                             or polygon_includes_pole(aCoord, pole="north", include_boundary=True):
                             continue
-                        
+
                         bCross_idl, aCoord_updated = (
                             check_cross_international_date_line_polygon(aCoord)
                         )
@@ -466,14 +469,18 @@ def fix_mesh_longitude_range_and_idl_crossing(
                                     )
                                 )
 
-                                if np.abs(np.min(eastern_polygon[:, 0]) - 180) < 1e-6:
+                                # Check if eastern polygon is valid (not empty and not degenerate)
+                                if len(eastern_polygon) == 0 or np.abs(np.min(eastern_polygon[:, 0]) - 180) < 1e-6:
                                     iFlag_eastern_valid = False
                                 else:
                                     iFlag_eastern_valid = True
                                     # Create eastern polygon
+                                    # Note: split function returns closed polygons (first == last)
+                                    # CloseRings() will handle closure, so we don't add the last point
                                     pPolygon_eastern = ogr.Geometry(ogr.wkbPolygon)
                                     pLinearRing_eastern = ogr.Geometry(ogr.wkbLinearRing)
-                                    for coord in eastern_polygon:
+                                    # Add all points except the last (closing) point
+                                    for coord in eastern_polygon[:-1]:
                                         # Force 2D by only using x,y coordinates
                                         pLinearRing_eastern.AddPoint_2D(coord[0], coord[1])
                                     pLinearRing_eastern.CloseRings()
@@ -481,14 +488,18 @@ def fix_mesh_longitude_range_and_idl_crossing(
                                     # Ensure the polygon is 2D
                                     pPolygon_eastern.FlattenTo2D()
 
-                                if np.abs(np.max(western_polygon[:, 0]) + 180) < 1e-6:
+                                # Check if western polygon is valid (not empty and not degenerate)
+                                if len(western_polygon) == 0 or np.abs(np.max(western_polygon[:, 0]) + 180) < 1e-6:
                                     iFlag_western_valid = False
                                 else:
                                     iFlag_western_valid = True
                                     # Create western polygon
+                                    # Note: split function returns closed polygons (first == last)
+                                    # CloseRings() will handle closure, so we don't add the last point
                                     pPolygon_western = ogr.Geometry(ogr.wkbPolygon)
                                     pLinearRing_western = ogr.Geometry(ogr.wkbLinearRing)
-                                    for coord in western_polygon:
+                                    # Add all points except the last (closing) point
+                                    for coord in western_polygon[:-1]:
                                         # Force 2D by only using x,y coordinates
                                         pLinearRing_western.AddPoint_2D(coord[0], coord[1])
                                     pLinearRing_western.CloseRings()

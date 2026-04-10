@@ -1,7 +1,7 @@
 import numpy as np
 import jigsawpy
 
-from pyearthmesh.utility.jigsaw.inpoly2 import inpoly2
+from pyearthmesh.meshes.unstructured.jigsaw.inpoly2 import inpoly2
 
 
 def addpoint(geom, point, itag):

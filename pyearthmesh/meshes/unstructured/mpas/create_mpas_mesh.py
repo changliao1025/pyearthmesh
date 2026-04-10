@@ -8,7 +8,7 @@ from pyearth.gis.geometry.international_date_line_utility import (
     split_international_date_line_polygon_coordinates,
 )
 from pyearthmesh.utility.convert_attributes import convert_gcs_attributes_to_meshcell
-from pyearthmesh.utility.jigsaw.run_jigsaw import run_jigsaw
+from pyearthmesh.meshes.unstructured.jigsaw.run_jigsaw import run_jigsaw
 from pyearthmesh.utility.potentiometric.calculate_potentiometric import (
     calculate_potentiometric,
 )
@@ -150,7 +150,7 @@ def create_mpas_mesh(
 
         iFlag_mpas_tool = 1
         if iFlag_mpas_tool == 1:
-            from pyearthmesh.utility.jigsaw.saveesm import saveesm
+            from pyearthmesh.meshes.unstructured.jigsaw.saveesm import saveesm
 
             sFilename_culled_mesh, sFilename_invert_mesh = saveesm(
                 sWorkspace_jigsaw_in,

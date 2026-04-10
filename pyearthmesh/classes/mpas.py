@@ -18,9 +18,6 @@ from pyearthmesh.classes.vertex import pyvertex
 from pyearthmesh.classes.edge import pyedge
 from pyearthmesh.classes.meshcell import pymeshcell
 
-
-
-
 class MpasClassEncoder(JSONEncoder):
     """
     Custom JSON encoder for pympas objects.

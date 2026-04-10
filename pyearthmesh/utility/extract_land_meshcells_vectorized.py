@@ -130,7 +130,12 @@ def _filter_mesh_by_land_single_file(mesh_path, land_path, output_path):
     # OPTIMIZATION 3: Use boolean indexing instead of iloc (faster for large datasets)
     mask = np.zeros(len(mesh), dtype=bool)
     mask[land_mesh_indices] = True
-    land_mesh = mesh[mask]
+    land_mesh = mesh[mask].reset_index(drop=True)
+
+    # Drop geometry bbox columns that GDAL/OGR exposes as regular fields from GeoParquet
+    bbox_cols = [c for c in land_mesh.columns if c.startswith('geometry_bbox') or c.startswith('__bbox')]
+    if bbox_cols:
+        land_mesh = land_mesh.drop(columns=bbox_cols)
 
     print(f"Saving to {output_path}...")
     if len(land_mesh) == 0:
@@ -139,14 +144,14 @@ def _filter_mesh_by_land_single_file(mesh_path, land_path, output_path):
     # Auto-detect format based on file extension
     file_ext = os.path.splitext(output_path)[1].lower()
     if file_ext == '.parquet':
-        land_mesh.to_parquet(output_path)
+        land_mesh.to_parquet(output_path, index=False)
     elif file_ext == '.gpkg':
-        land_mesh.to_file(output_path, driver="GPKG")
+        land_mesh.to_file(output_path, driver="GPKG", index=False)
     elif file_ext in ['.shp', '.geojson', '.json']:
-        land_mesh.to_file(output_path)
+        land_mesh.to_file(output_path, index=False)
     else:
         # Default to parquet for efficiency with large datasets
-        land_mesh.to_parquet(output_path)
+        land_mesh.to_parquet(output_path, index=False)
 
     print(f"Saved {len(land_mesh)} mesh cells to {output_path}")
     print("Done!")
@@ -247,11 +252,13 @@ def _filter_mesh_by_land_multi_tile(sWorkspace_in,
 
     aTask = []
     for root, dirs, files in os.walk(sWorkspace_in):
-        # Prevent os.walk from descending into the output workspace when it's
-        # inside the input workspace by removing matching dirs in-place
-        dirs[:] = [d for d in dirs if not os.path.abspath(os.path.join(root, d)).startswith(sWorkspace_out_abs)]
+        if os.path.abspath(root) != sWorkspace_in_abs:
+            continue
 
-        # Skip processing if current root is the output workspace (safety)
+        # disable descent into subfolders
+        dirs[:] = []
+
+        # skip processing if current root is the output workspace (safety)
         if os.path.abspath(root).startswith(sWorkspace_out_abs):
             continue
 

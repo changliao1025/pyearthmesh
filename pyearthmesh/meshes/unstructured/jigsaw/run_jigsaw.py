@@ -10,9 +10,9 @@ import jigsawpy
 from pyearth.gis.gdal.read.raster.gdal_read_geotiff_file import gdal_read_geotiff_file
 
 import mpas_tools.mesh.creation.mesh_definition_tools as mdt
-from pyearthmesh.utility.jigsaw.inpoly2 import inpoly2
-from pyearthmesh.utility.jigsaw.loadgeo import loadgeo
-from pyearthmesh.utility.jigsaw.utility import addpoint, addline, addpoly, innerto
+from pyearthmesh.meshes.unstructured.jigsaw.inpoly2 import inpoly2
+from pyearthmesh.meshes.unstructured.jigsaw.loadgeo import loadgeo
+from pyearthmesh.meshes.unstructured.jigsaw.utility import addpoint, addline, addpoly, innerto
 
 
 def compute_mask(

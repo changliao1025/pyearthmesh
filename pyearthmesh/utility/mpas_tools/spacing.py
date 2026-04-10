@@ -3,7 +3,7 @@ from scipy import spatial
 from scipy import interpolate
 import jigsawpy
 
-from pyearthmesh.utility.jigsaw.utility import zipmesh
+from pyearthmesh.meshes.unstructured.jigsaw.utility import zipmesh
 
 
 def sphdist(rsph, xone, yone, xtwo, ytwo):

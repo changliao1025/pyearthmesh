@@ -334,6 +334,7 @@ def create_healpix_mesh(dResolution_meter_in,
     # example command: dgg isea3h -crs ico grid 3 > isea3h-level3-isea.geojson
 
     nside = 2 ** iLevel  # nside is 2^level for HEALPix.
+    cell_area = hp.nside2pixarea(nside, degrees=False) * (earth_radius ** 2)
 
     # 1. Get total number of pixels
     npix = hp.nside2npix(nside)
@@ -379,6 +380,7 @@ def create_healpix_mesh(dResolution_meter_in,
             pDataset_out.createVariable('cellid', 'i4', ('cell',))
             pDataset_out.createVariable('lon', 'f4', ('cell',))
             pDataset_out.createVariable('lat', 'f4', ('cell',))
+            pDataset_out.createVariable('area', 'f8', ('cell',))
             #also save the vertices of the cells
             pDataset_out.createDimension('nv', 4) #careful, this assumes 4 vertices per cell, which is true for HEALPix but not for rHEALPix?
             pDataset_out.createVariable('xv', 'f4', ('cell', 'nv'))
@@ -393,7 +395,7 @@ def create_healpix_mesh(dResolution_meter_in,
                 chunk_len = len(chunk_pix)
 
                 # Pre-allocate arrays for this chunk
-                chunk_cellids = np.zeros(chunk_len, dtype=np.int32)
+                chunk_cellids = np.arange(chunk_start + 1, chunk_end + 1, dtype=np.int32)
                 chunk_lons = np.zeros(chunk_len, dtype=np.float32)
                 chunk_lats = np.zeros(chunk_len, dtype=np.float32)
                 chunk_xv = np.zeros((chunk_len, 4), dtype=np.float32)
@@ -429,7 +431,6 @@ def create_healpix_mesh(dResolution_meter_in,
                     center_lon = center_lon - 360 if center_lon > 180 else center_lon
 
                     # Store in chunk arrays
-                    chunk_cellids[i] = pix
                     chunk_lons[i] = center_lon
                     chunk_lats[i] = center_lat
                     chunk_xv[i, :] = lons
@@ -439,6 +440,7 @@ def create_healpix_mesh(dResolution_meter_in,
                 pDataset_out.variables['cellid'][chunk_start:chunk_end] = chunk_cellids
                 pDataset_out.variables['lon'][chunk_start:chunk_end] = chunk_lons
                 pDataset_out.variables['lat'][chunk_start:chunk_end] = chunk_lats
+                pDataset_out.variables['area'][chunk_start:chunk_end] = cell_area
                 pDataset_out.variables['xv'][chunk_start:chunk_end, :] = chunk_xv
                 pDataset_out.variables['yv'][chunk_start:chunk_end, :] = chunk_yv
 
@@ -460,6 +462,9 @@ def create_healpix_mesh(dResolution_meter_in,
             pLayer_out.CreateField(ogr.FieldDefn('cellid', ogr.OFTInteger))
             pLayer_out.CreateField(ogr.FieldDefn('lon', ogr.OFTReal))
             pLayer_out.CreateField(ogr.FieldDefn('lat', ogr.OFTReal))
+            pLayer_out.CreateField(ogr.FieldDefn('area', ogr.OFTReal))
+            #add a string field for healpix id if needed in the future, but for now we can just use the cellid integer field
+            pLayer_out.CreateField(ogr.FieldDefn('healpixid', ogr.OFTString))
 
             # Use transactions for better performance
             chunk_size = 1000  # Commit every 1000 features
@@ -471,7 +476,7 @@ def create_healpix_mesh(dResolution_meter_in,
                 # Start transaction for this chunk
                 pLayer_out.StartTransaction()
 
-                for pix in chunk_pix:
+                for i, pix in enumerate(chunk_pix):
                     # Get the 4 corners of the HEALPix cell
                     corners = hp.boundaries(nside, pix, step=1, nest=True)
                     # Convert vectors to Lat/Lon
@@ -494,7 +499,6 @@ def create_healpix_mesh(dResolution_meter_in,
                     center_lon, center_lat = hp.pix2ang(nside, pix, nest=True, lonlat=True)
                     # Convert center longitude from [0, 360] to [-180, 180]
                     center_lon = center_lon - 360 if center_lon > 180 else center_lon
-
                     # Create a polygon for this cell
                     ring = ogr.Geometry(ogr.wkbLinearRing)
                     for lon, lat in zip(lons, lats):
@@ -506,10 +510,12 @@ def create_healpix_mesh(dResolution_meter_in,
 
                     # Create a feature for this cell
                     feature = ogr.Feature(pLayer_out.GetLayerDefn())
-                    feature.SetField('cellid', int(pix))
+                    feature.SetField('cellid', int(chunk_start + i + 1))
                     feature.SetField('lon', float(center_lon))
                     feature.SetField('lat', float(center_lat))
+                    feature.SetField('healpixid', str(pix))
                     feature.SetGeometry(poly)
+                    feature.SetField('area', float(cell_area))
                     pLayer_out.CreateFeature(feature)
                     feature = None
 
@@ -563,6 +569,7 @@ def create_healpix_mesh(dResolution_meter_in,
                 pDataset_tile.createVariable('cellid', 'i4', ('cell',))
                 pDataset_tile.createVariable('lon', 'f4', ('cell',))
                 pDataset_tile.createVariable('lat', 'f4', ('cell',))
+                pDataset_tile.createVariable('area', 'f8', ('cell',))
                 pDataset_tile.createDimension('nv', 4)
                 pDataset_tile.createVariable('xv', 'f4', ('cell', 'nv'))
                 pDataset_tile.createVariable('yv', 'f4', ('cell', 'nv'))
@@ -581,7 +588,7 @@ def create_healpix_mesh(dResolution_meter_in,
                     chunk_pix = tile_pix_indices[chunk_start:chunk_end]
                     chunk_len = len(chunk_pix)
 
-                    chunk_cellids = np.zeros(chunk_len, dtype=np.int32)
+                    chunk_cellids = np.arange(tile_start + chunk_start + 1, tile_start + chunk_end + 1, dtype=np.int32)
                     chunk_lons = np.zeros(chunk_len, dtype=np.float32)
                     chunk_lats = np.zeros(chunk_len, dtype=np.float32)
                     chunk_xv = np.zeros((chunk_len, 4), dtype=np.float32)
@@ -601,7 +608,6 @@ def create_healpix_mesh(dResolution_meter_in,
                         # Convert center longitude from [0, 360] to [-180, 180]
                         center_lon = center_lon - 360 if center_lon > 180 else center_lon
 
-                        chunk_cellids[i] = pix
                         chunk_lons[i] = center_lon
                         chunk_lats[i] = center_lat
                         chunk_xv[i, :] = lons
@@ -610,6 +616,7 @@ def create_healpix_mesh(dResolution_meter_in,
                     pDataset_tile.variables['cellid'][chunk_start:chunk_end] = chunk_cellids
                     pDataset_tile.variables['lon'][chunk_start:chunk_end] = chunk_lons
                     pDataset_tile.variables['lat'][chunk_start:chunk_end] = chunk_lats
+                    pDataset_tile.variables['area'][chunk_start:chunk_end] = cell_area
                     pDataset_tile.variables['xv'][chunk_start:chunk_end, :] = chunk_xv
                     pDataset_tile.variables['yv'][chunk_start:chunk_end, :] = chunk_yv
 
@@ -626,6 +633,7 @@ def create_healpix_mesh(dResolution_meter_in,
                 pLayer_tile.CreateField(ogr.FieldDefn('cellid', ogr.OFTInteger))
                 pLayer_tile.CreateField(ogr.FieldDefn('lon', ogr.OFTReal))
                 pLayer_tile.CreateField(ogr.FieldDefn('lat', ogr.OFTReal))
+                pLayer_tile.CreateField(ogr.FieldDefn('area', ogr.OFTReal))
                 pLayer_tile.CreateField(ogr.FieldDefn('tile_index', ogr.OFTInteger))
 
                 chunk_size = 1000
@@ -637,7 +645,7 @@ def create_healpix_mesh(dResolution_meter_in,
 
                     pLayer_tile.StartTransaction()
 
-                    for pix in chunk_pix:
+                    for i, pix in enumerate(chunk_pix):
                         corners = hp.boundaries(nside, pix, step=1, nest=True)
                         lons, lats = hp.vec2ang(corners.T, lonlat=True)
                         # Convert longitude from [0, 360] to [-180, 180]
@@ -659,9 +667,10 @@ def create_healpix_mesh(dResolution_meter_in,
                         poly.AddGeometry(ring)
 
                         feature = ogr.Feature(pLayer_tile.GetLayerDefn())
-                        feature.SetField('cellid', int(pix))
+                        feature.SetField('cellid', int(tile_start + chunk_start + i + 1))
                         feature.SetField('lon', float(center_lon))
                         feature.SetField('lat', float(center_lat))
+                        feature.SetField('area', float(cell_area))
                         feature.SetField('tile_index', iTile)
                         feature.SetGeometry(poly)
                         pLayer_tile.CreateFeature(feature)
@@ -790,6 +799,7 @@ def _write_tile_file(filename, pix_indices, nside, iFlag_netcdf):
         os.remove(filename)
 
     n_cells = len(pix_indices)
+    cell_area = hp.nside2pixarea(nside, degrees=False) * (earth_radius ** 2)
 
     if iFlag_netcdf == 1:
         import netCDF4 as nc
@@ -798,6 +808,7 @@ def _write_tile_file(filename, pix_indices, nside, iFlag_netcdf):
         pDataset.createVariable('cellid', 'i4', ('cell',))
         pDataset.createVariable('lon', 'f4', ('cell',))
         pDataset.createVariable('lat', 'f4', ('cell',))
+        pDataset.createVariable('area', 'f8', ('cell',))
         pDataset.createDimension('nv', 4)
         pDataset.createVariable('xv', 'f4', ('cell', 'nv'))
         pDataset.createVariable('yv', 'f4', ('cell', 'nv'))
@@ -809,7 +820,7 @@ def _write_tile_file(filename, pix_indices, nside, iFlag_netcdf):
             chunk_pix = pix_indices[chunk_start:chunk_end]
             chunk_len = len(chunk_pix)
 
-            chunk_cellids = np.zeros(chunk_len, dtype=np.int32)
+            chunk_cellids = (chunk_pix + 1).astype(np.int32)
             chunk_lons = np.zeros(chunk_len, dtype=np.float32)
             chunk_lats = np.zeros(chunk_len, dtype=np.float32)
             chunk_xv = np.zeros((chunk_len, 4), dtype=np.float32)
@@ -826,7 +837,6 @@ def _write_tile_file(filename, pix_indices, nside, iFlag_netcdf):
                 center_lon, center_lat = hp.pix2ang(nside, pix, nest=True, lonlat=True)
                 center_lon = center_lon - 360 if center_lon > 180 else center_lon
 
-                chunk_cellids[i] = pix
                 chunk_lons[i] = center_lon
                 chunk_lats[i] = center_lat
                 chunk_xv[i, :] = lons
@@ -835,6 +845,7 @@ def _write_tile_file(filename, pix_indices, nside, iFlag_netcdf):
             pDataset.variables['cellid'][chunk_start:chunk_end] = chunk_cellids
             pDataset.variables['lon'][chunk_start:chunk_end] = chunk_lons
             pDataset.variables['lat'][chunk_start:chunk_end] = chunk_lats
+            pDataset.variables['area'][chunk_start:chunk_end] = cell_area
             pDataset.variables['xv'][chunk_start:chunk_end, :] = chunk_xv
             pDataset.variables['yv'][chunk_start:chunk_end, :] = chunk_yv
 
@@ -850,6 +861,7 @@ def _write_tile_file(filename, pix_indices, nside, iFlag_netcdf):
         pLayer.CreateField(ogr.FieldDefn('cellid', ogr.OFTInteger))
         pLayer.CreateField(ogr.FieldDefn('lon', ogr.OFTReal))
         pLayer.CreateField(ogr.FieldDefn('lat', ogr.OFTReal))
+        pLayer.CreateField(ogr.FieldDefn('area', ogr.OFTReal))
 
         chunk_size = 1000
         for chunk_start in range(0, n_cells, chunk_size):
@@ -858,7 +870,7 @@ def _write_tile_file(filename, pix_indices, nside, iFlag_netcdf):
 
             pLayer.StartTransaction()
 
-            for pix in chunk_pix:
+            for i, pix in enumerate(chunk_pix):
                 corners = hp.boundaries(nside, pix, step=1, nest=True)
                 lons, lats = hp.vec2ang(corners.T, lonlat=True)
                 if np.all(lons >= 180):
@@ -878,9 +890,10 @@ def _write_tile_file(filename, pix_indices, nside, iFlag_netcdf):
                 poly.AddGeometry(ring)
 
                 feature = ogr.Feature(pLayer.GetLayerDefn())
-                feature.SetField('cellid', int(pix))
+                feature.SetField('cellid', int(pix + 1))
                 feature.SetField('lon', float(center_lon))
                 feature.SetField('lat', float(center_lat))
+                feature.SetField('area', float(cell_area))
                 feature.SetGeometry(poly)
                 pLayer.CreateFeature(feature)
                 feature = None

@@ -11,6 +11,16 @@ def convert_vector_format_multi_tile(sWorkspace_in, sWorkspace_out, sExtension_i
 
     #find all the matching files in the input workspace
     for root, dirs, files in os.walk(sWorkspace_in):
+        if os.path.abspath(root) != os.path.abspath(sWorkspace_in):
+            continue
+
+        # disable descent into subfolders
+        dirs[:] = []
+
+        # skip processing if current root is the output workspace (safety)
+        if os.path.abspath(root).startswith(os.path.abspath(sWorkspace_out)):
+            continue
+        
         for file in files:
             if file.endswith(sExtension_in):
                 sFile_in = os.path.join(root, file)

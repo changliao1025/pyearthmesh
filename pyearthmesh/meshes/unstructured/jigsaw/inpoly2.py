@@ -214,7 +214,7 @@ try:
     iFlag_cython = importlib.util.find_spec("cython")
     if iFlag_cython is not None:
         # -- automagically "override" _inpoly with a compiled kernel!
-        from pyearthmesh.utility.jigsaw.inpoly2 import _inpoly  # noqa
+        from pyearthmesh.meshes.unstructured.jigsaw.inpoly2 import _inpoly  # noqa
 
 except ImportError:
     # -- if it hasn't been built, just stick with the .py version

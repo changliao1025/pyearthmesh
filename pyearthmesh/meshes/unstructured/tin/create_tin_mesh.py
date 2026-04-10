@@ -6,8 +6,8 @@ from pyearth.gis.location.convert_between_longitude_latitude_and_sphere_3d impor
     convert_sphere_3d_to_longitude_latitude,
 )
 from pyearthmesh.utility.convert_coordinates import convert_gcs_coordinates_to_meshcell
-from pyearthmesh.utility.jigsaw.run_jigsaw import run_jigsaw
-from pyearthmesh.utility.jigsaw.savetin import savetin
+from pyearthmesh.meshes.unstructured.jigsaw.run_jigsaw import run_jigsaw
+from pyearthmesh.meshes.unstructured.jigsaw.savetin import savetin
 
 
 def update_vertices_on_cell(nCell, nVertex, cellsOnVertex):

@@ -65,6 +65,7 @@ def check_mesh_quality_multi_tile(
         # skip processing if current root is the output workspace (safety)
         if os.path.abspath(root).startswith(sWorkspace_out_abs):
             continue
+
         #sort files to ensure consistent processing order
         files.sort()
         #exclude files that has '_fixed' in the name to avoid re-processing already fixed meshes
@@ -72,6 +73,8 @@ def check_mesh_quality_multi_tile(
         for file in files:
             if file.endswith(sExtension_in):
                 sFile_in = os.path.join(root, file)
+                #if '_01' not in sFile_in:
+                #    continue
                 if '06' in sFile_in:
                     #all ocean cell, so we dont need to worry about IDL crossing cells
                     iFlag_drop_idl_crossing_cells_in = True

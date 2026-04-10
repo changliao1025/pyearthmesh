@@ -424,10 +424,13 @@ def _extract_land_meshcells_multi_tile_impl(sWorkspace_in,
 
     aTask = []
     for root, dirs, files in os.walk(sWorkspace_in):
-        # Prevent os.walk from descending into the output workspace when it's
-        # inside the input workspace by removing matching dirs in-place
-        dirs[:] = [d for d in dirs if not os.path.abspath(os.path.join(root, d)).startswith(sWorkspace_out_abs)]
-        # Skip processing if current root is the output workspace (safety)
+        if os.path.abspath(root) != sWorkspace_in_abs:
+            continue
+
+        # disable descent into subfolders
+        dirs[:] = []
+
+        # skip processing if current root is the output workspace (safety)
         if os.path.abspath(root).startswith(sWorkspace_out_abs):
             continue
         # Sort files to ensure consistent processing order

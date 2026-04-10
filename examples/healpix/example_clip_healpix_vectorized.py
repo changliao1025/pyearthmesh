@@ -4,16 +4,16 @@ import os
 from pyearthmesh.utility.extract_land_meshcells_vectorized import extract_land_meshcells_vectorized
 from pyearth.gis.gdal.gdal_vector_format_support import get_vector_format_from_extension
 
-dResolution_meter = 10000  #1 km
+dResolution_meter = 1000  #1 km
 sResoluton = str(int(dResolution_meter/ 1000)) + "km"
 
 dThreshold_area_island= 1000 * 1000 * 10 #50 km2
 dDistance_buffer_meter= 5000 #5 km
 
-sResolution_nature_earth_coastline = "110m"
+sResolution_nature_earth_coastline = "10m"
 sResolution_buffer = str(int(dDistance_buffer_meter/ 1000)) + "km"
 
-case_index = 1
+case_index = 4
 iFlag_use_tiles = 1
 sCase_index = str(case_index).zfill(2)
 
