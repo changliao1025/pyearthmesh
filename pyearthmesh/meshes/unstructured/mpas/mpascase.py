@@ -57,6 +57,38 @@ class mpascase():
         if "pBoundary_wkt" in aConfig_in:
             self.pBoundary_wkt = aConfig_in["pBoundary_wkt"]
 
+        # Polar region flags
+        if "iFlag_antarctic" in aConfig_in:
+            self.iFlag_antarctic = int(aConfig_in["iFlag_antarctic"])
+        else:
+            self.iFlag_antarctic = 0
+
+        if "iFlag_arctic" in aConfig_in:
+            self.iFlag_arctic = int(aConfig_in["iFlag_arctic"])
+        else:
+            self.iFlag_arctic = 0
+
+        # Domain extent (used when not in a polar domain)
+        if "dLatitude_top" in aConfig_in:
+            self.dLatitude_top = float(aConfig_in["dLatitude_top"])
+        else:
+            self.dLatitude_top = 90.0
+
+        if "dLatitude_bot" in aConfig_in:
+            self.dLatitude_bot = float(aConfig_in["dLatitude_bot"])
+        else:
+            self.dLatitude_bot = -90.0
+
+        if "dLongitude_left" in aConfig_in:
+            self.dLongitude_left = float(aConfig_in["dLongitude_left"])
+        else:
+            self.dLongitude_left = -180.0
+
+        if "dLongitude_right" in aConfig_in:
+            self.dLongitude_right = float(aConfig_in["dLongitude_right"])
+        else:
+            self.dLongitude_right = 180.0
+
         self.sModel = 'mpas'
 
         if "iFlag_global" in aConfig_in:
@@ -122,24 +154,53 @@ class mpascase():
         return
 
     def run(self):
-        """Run the MPAS mesh generation workflow."""
+        """Run the MPAS mesh generation workflow.
+
+        Follows the same boundary-selection logic as pyflowline's
+        ``pyflowline_mesh_generation``:
+
+        * If ``iFlag_antarctic == 1`` **or** ``iFlag_arctic == 1``, the polar
+          domain is handled internally by ``create_mpas_mesh`` — no
+          ``pBoundary_wkt`` is passed.
+        * Otherwise the boundary WKT stored in ``self.pBoundary_wkt`` (read
+          from the configuration file) is forwarded directly to
+          ``create_mpas_mesh``.
+        """
         from pyearthmesh.meshes.unstructured.mpas.create_mpas_mesh import create_mpas_mesh
 
         sWorkspace_jigsaw = self.sWorkspace_output if self.iFlag_run_jigsaw == 1 else None
         aConfig_jigsaw = getattr(self, 'aConfig_jigsaw', None) if self.iFlag_run_jigsaw == 1 else None
 
-        self.aMpas = create_mpas_mesh(
-            self.sFilename_mesh,
-            iFlag_global_in=self.iFlag_global,
-            iFlag_save_mesh_in=self.iFlag_save_mesh,
-            iFlag_run_jigsaw_in=self.iFlag_run_jigsaw,
-            pBoundary_in=self.pBoundary_wkt,
-            sWorkspace_jigsaw_in=sWorkspace_jigsaw,
-            sFilename_mpas_mesh_netcdf_in=self.sFilename_mpas_mesh_netcdf,
-            sFilename_jigsaw_mesh_netcdf_in=self.sFilename_jigsaw_mesh_netcdf,
-            sFilename_land_ocean_mask_in=self.sFilename_land_ocean_mask,
-            aConfig_jigsaw_in=aConfig_jigsaw,
-        )
+        if self.iFlag_antarctic == 1 or self.iFlag_arctic == 1:
+            # Polar domain: let create_mpas_mesh handle the boundary internally
+            self.aMpas = create_mpas_mesh(
+                self.sFilename_mesh,
+                iFlag_global_in=self.iFlag_global,
+                iFlag_save_mesh_in=self.iFlag_save_mesh,
+                iFlag_run_jigsaw_in=self.iFlag_run_jigsaw,
+                iFlag_antarctic_in=self.iFlag_antarctic,
+                iFlag_arctic_in=self.iFlag_arctic,
+                sWorkspace_jigsaw_in=sWorkspace_jigsaw,
+                sFilename_mpas_mesh_netcdf_in=self.sFilename_mpas_mesh_netcdf,
+                sFilename_jigsaw_mesh_netcdf_in=self.sFilename_jigsaw_mesh_netcdf,
+                aConfig_jigsaw_in=aConfig_jigsaw,
+            )
+        else:
+            # Non-polar domain: use pBoundary_wkt from config
+            self.aMpas = create_mpas_mesh(
+                self.sFilename_mesh,
+                iFlag_global_in=self.iFlag_global,
+                iFlag_save_mesh_in=self.iFlag_save_mesh,
+                iFlag_run_jigsaw_in=self.iFlag_run_jigsaw,
+                iFlag_antarctic_in=self.iFlag_antarctic,
+                iFlag_arctic_in=self.iFlag_arctic,
+                pBoundary_in=self.pBoundary_wkt,
+                sWorkspace_jigsaw_in=sWorkspace_jigsaw,
+                sFilename_mpas_mesh_netcdf_in=self.sFilename_mpas_mesh_netcdf,
+                sFilename_jigsaw_mesh_netcdf_in=self.sFilename_jigsaw_mesh_netcdf,
+                sFilename_land_ocean_mask_in=self.sFilename_land_ocean_mask,
+                aConfig_jigsaw_in=aConfig_jigsaw,
+            )
         return self.aMpas
 
     def _mpas_create_hpc_job(self, sSlurm_in=None, hours_in=10):

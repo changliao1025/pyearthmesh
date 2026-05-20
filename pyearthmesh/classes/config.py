@@ -205,11 +205,19 @@ class MPASConfig(BaseMeshConfig):
             "sFilename_mpas_mesh_netcdf": None,  # MPAS mesh NetCDF file
             "sFilename_jigsaw_mesh_netcdf": None,  # JIGSAW mesh NetCDF file
             "sFilename_land_ocean_mask": None,  # Land-ocean mask file
-            "pBoundary_wkt": None,  # Boundary in WKT format
+            "pBoundary_wkt": None,  # Boundary in WKT format (used when not polar)
             "iFlag_run_jigsaw": 1,  # Flag to run JIGSAW for mesh generation
             # Common mesh parameters
             "iFlag_global": 1,  # Global mesh flag
             "iFlag_save_mesh": 1,  # Save mesh flag
+            # Polar region flags
+            "iFlag_antarctic": 0,  # Antarctic region flag (1 = Antarctic domain)
+            "iFlag_arctic": 0,  # Arctic region flag (1 = Arctic domain)
+            # Domain extent (used when iFlag_antarctic==0 and iFlag_arctic==0)
+            "dLatitude_top": 90.0,    # Top (north) boundary latitude in degrees
+            "dLatitude_bot": -90.0,   # Bottom (south) boundary latitude in degrees
+            "dLongitude_left": -180.0,  # Left (west) boundary longitude in degrees
+            "dLongitude_right": 180.0,  # Right (east) boundary longitude in degrees
             "mesh_type": "mpas",  # Mesh type identifier
         }
 
