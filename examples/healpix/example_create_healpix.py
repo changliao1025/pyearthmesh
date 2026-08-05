@@ -24,7 +24,7 @@ sFormat_gdal_safe = sFormat_gdal.replace(' ', '_')
 
 sCase_index = str(case_index).zfill(2)
 
-sWorkspace_output_base = '/compyfs/liao313/04model/pyearthmesh/'
+sWorkspace_output_base = '/data2/share/liaochang/04model/pyearthmesh/'
 sResoluton = str(int(dResolution_meter/ 1000)) + "km"
 #sWorkspace_output = os.path.join(sWorkspace_output_base, 'healpix')
 sWorkspace_output = os.path.join(sWorkspace_output_base, 'healpix', sResoluton, sFormat_gdal_safe, sCase_index)
