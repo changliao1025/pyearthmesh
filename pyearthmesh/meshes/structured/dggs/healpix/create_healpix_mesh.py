@@ -1,4 +1,4 @@
-import os, stat, platform
+import os, stat, platform, gc, time
 import numpy as np
 from pathlib import Path
 import subprocess
@@ -370,7 +370,11 @@ def create_healpix_mesh(dResolution_meter_in,
     if iFlag_use_tiles == 0 or nTile == 1:
         #remove the output file if it already exists
         if os.path.exists(sFilename_mesh_full):
-            os.remove(sFilename_mesh_full)
+            gc.collect()
+            try:
+                os.remove(sFilename_mesh_full)
+            except PermissionError:
+                pass
 
         if iFlag_netcdf == 1:
             import netCDF4 as nc
@@ -555,7 +559,11 @@ def create_healpix_mesh(dResolution_meter_in,
 
             # Remove existing tile file if it exists
             if os.path.exists(sFilename_tile_full):
-                os.remove(sFilename_tile_full)
+                gc.collect()
+                try:
+                    os.remove(sFilename_tile_full)
+                except PermissionError:
+                    pass
 
             tile_filenames.append(sFilename_tile)
 
@@ -796,7 +804,12 @@ def _create_healpix_mesh_with_advanced_tiles(iLevel, nside, pix_indices, sFilena
 def _write_tile_file(filename, pix_indices, nside, iFlag_netcdf):
     """Write a single tile file."""
     if os.path.exists(filename):
-        os.remove(filename)
+        # Force cleanup of any lingering GDAL file handles (Windows file locking)
+        gc.collect()
+        try:
+            os.remove(filename)
+        except PermissionError:
+            pass
 
     n_cells = len(pix_indices)
     cell_area = hp.nside2pixarea(nside, degrees=False) * (earth_radius ** 2)

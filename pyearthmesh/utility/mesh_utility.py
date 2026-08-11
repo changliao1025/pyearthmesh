@@ -1,9 +1,6 @@
 
-from pyearth.gis.geometry.international_date_line_utility import (
-    split_international_date_line_polygon_coordinates,
-    check_cross_international_date_line_polygon,
-)
-from pyearth.gis.geometry.pole_check import polygon_includes_pole
+from pyearth.gis.idl_handler import IdlStrategy, IdlHandler
+from pyearth.gis.polar_handler import polygon_includes_pole
 from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
 from pyearth.gis.gdal.gdal_vector_format_support import get_vector_driver_from_filename
 import os
@@ -357,7 +354,7 @@ def fix_mesh_longitude_range_and_idl_crossing(
     Returns:
         bool: True if successful, False otherwise
     """
-    pDriver = None
+   
     pDataset = None
     pDataset_out = None
 
@@ -415,13 +412,7 @@ def fix_mesh_longitude_range_and_idl_crossing(
             idl_crossing_count = 0
 
             for pFeature in pLayer:
-                try:
-                    #481245 cell id for debug
-                    #cellid = pFeature.GetField("cellid")
-                    #if cellid == 481245:
-                    #    print("debug: found cell 481245 for IDL crossing check")
-                    #else:
-                    #    continue
+                try:                   
                     geometry = pFeature.GetGeometryRef()
                     if geometry is None:
                         logger.warning(
@@ -447,9 +438,10 @@ def fix_mesh_longitude_range_and_idl_crossing(
                             or polygon_includes_pole(aCoord, pole="north", include_boundary=True):
                             continue
 
-                        bCross_idl, aCoord_updated = (
-                            check_cross_international_date_line_polygon(aCoord)
-                        )
+                        idl_result = IdlHandler(IdlStrategy.CHECK_ONLY).detect(aCoord)
+                        bCross_idl = idl_result.crosses_idl
+                        aCoord_updated = idl_result.adjusted_coords
+                        
                         if bCross_idl:
                             idl_crossing_count += 1
                             logger.info(
@@ -463,11 +455,8 @@ def fix_mesh_longitude_range_and_idl_crossing(
                                 continue
                             else:
                                 #keep with split method
-                                [eastern_polygon, western_polygon] = (
-                                    split_international_date_line_polygon_coordinates(
-                                        aCoord
-                                    )
-                                )
+                                split_result = IdlHandler(IdlStrategy.SPLIT).detect(aCoord)
+                                eastern_polygon, western_polygon = split_result.sub_polygons
 
                                 # Check if eastern polygon is valid (not empty and not degenerate)
                                 if len(eastern_polygon) == 0 or np.abs(np.min(eastern_polygon[:, 0]) - 180) < 1e-6:
@@ -684,11 +673,11 @@ def _validate_polygon_geometry(
             return True
 
         # Check for International Date Line crossing (this is allowed but logged)
-        iCross_idl, dummy = check_cross_international_date_line_polygon(aCoord)
+        idl_result = IdlHandler(IdlStrategy.CHECK_ONLY).detect(aCoord)
+        iCross_idl = idl_result.crosses_idl
         if np.any(lons < -170) and np.any(lons > 170):
             if not iCross_idl:
                 print("debug: feature crosses IDL based on coordinate range check")
-                iCross_idl, dummy = check_cross_international_date_line_polygon(aCoord)
         if iCross_idl:
             if iFlag_verbose_in:
                 logger.info(
