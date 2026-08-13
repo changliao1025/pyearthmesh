@@ -11,7 +11,7 @@ dResolution_meter = 50000  #1 km
 iFlag_create_mesh = 1
 iFlag_use_tiles = 1
 case_index = 1
-sFilename_mesh = "healpix_mesh.parquet"
+sFilename_mesh = "healpix_mesh.geojson"
 #get extension using the filename only
 sExtension_mesh = os.path.splitext(sFilename_mesh)[1].lower()
 #now use the extension to determine the gdal format
@@ -24,7 +24,7 @@ sFormat_gdal_safe = sFormat_gdal.replace(' ', '_')
 
 sCase_index = str(case_index).zfill(2)
 
-sWorkspace_output_base = 'C:/Users/chang/scratch/04model/pyearthmesh/'
+sWorkspace_output_base = r'D:/scratch/04model/pyearthmesh/'
 sResoluton = str(int(dResolution_meter/ 1000)) + "km"
 #sWorkspace_output = os.path.join(sWorkspace_output_base, 'healpix')
 sWorkspace_output = os.path.join(sWorkspace_output_base, 'healpix', sResoluton, sFormat_gdal_safe, sCase_index)

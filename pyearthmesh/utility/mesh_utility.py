@@ -420,6 +420,9 @@ def fix_mesh_longitude_range_and_idl_crossing(
                         )
                         continue
 
+                    #use cellid for debug
+                    cellid = pFeature.GetField("cellid")                     
+
                     geometry_type = geometry.GetGeometryName()
                     # Fix longitude coordinates using GDAL
                     fixed_geometry = fix_longitude_range_gdal(geometry)
@@ -438,9 +441,13 @@ def fix_mesh_longitude_range_and_idl_crossing(
                             or polygon_includes_pole(aCoord, pole="north", include_boundary=True):
                             continue
 
+                        cellid = pFeature.GetField("cellid")
+                        if cellid == 21888:
+                            pass
+
                         idl_result = IdlHandler(IdlStrategy.CHECK_ONLY).detect(aCoord)
                         bCross_idl = idl_result.crosses_idl
-                        aCoord_updated = idl_result.adjusted_coords
+                        aCoord_updated = idl_result.adjusted_coords                        
                         
                         if bCross_idl:
                             idl_crossing_count += 1
