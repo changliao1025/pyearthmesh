@@ -441,9 +441,7 @@ def fix_mesh_longitude_range_and_idl_crossing(
                             or polygon_includes_pole(aCoord, pole="north", include_boundary=True):
                             continue
 
-                        cellid = pFeature.GetField("cellid")
-                        if cellid == 21888:
-                            pass
+                        cellid = pFeature.GetField("cellid")                  
 
                         idl_result = IdlHandler(IdlStrategy.CHECK_ONLY).detect(aCoord)
                         bCross_idl = idl_result.crosses_idl
