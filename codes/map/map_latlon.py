@@ -41,18 +41,15 @@ sWorkspace_project = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abs
 sFilename_mesh = os.path.join(sWorkspace_project, 'data', 'qinghaihu', 'lake_latlon.geojson')
 sWorkspace_output = os.path.join(sWorkspace_project, 'data', 'qinghaihu')
 
-
-
 # compute the zoom level that matches a 1000x1000 pixel figure at 150 dpi
 image_size = [1000, 1000]
 dpi = 150
 scale_denominator = RasterTileServer.calculate_scale_denominator(aExtent, image_size)
 pSrc = osr.SpatialReference()
-pSrc.ImportFromEPSG(3857)  # mercator
+pSrc.ImportFromEPSG(3857)  #mercator
 pProjection = pSrc.ExportToWkt()
 iZoom_level = RasterTileServer.calculate_zoom_level(scale_denominator, pProjection, dpi=dpi)
 print(f'Computed zoom level for Qinghai Lake: {iZoom_level}')
-
 
 def example_map_all_providers():
     """Map the lake boundary and the mesh on top of every basemap provider, one by one."""
@@ -73,10 +70,10 @@ def example_map_all_providers():
     dLat_center = 0.5 * (aExtent[2] + aExtent[3])
 
     for sProvider in aProvider:
-        
+
         iZoom_provider = iZoom_level
         if sProvider != 'Esri.NatGeo':
-            continue       
+            continue
 
         sFilename_output = os.path.join(sWorkspace_output, f'lake_latlon_map_{sProvider}.png')
         print(f"Mapping provider: {sProvider}")
