@@ -51,7 +51,7 @@ pProjection = pSrc.ExportToWkt()
 iZoom_level = RasterTileServer.calculate_zoom_level(scale_denominator, pProjection, dpi=dpi)
 print(f'Computed zoom level for Qinghai Lake: {iZoom_level}')
 
-def example_map_all_providers():
+def example_map_all_providers(sProvider_in = None):
     """Map the lake boundary and the mesh on top of every basemap provider, one by one."""
     print("=" * 60)
     print("Example: Map all basemap providers one by one")
@@ -71,9 +71,10 @@ def example_map_all_providers():
 
     for sProvider in aProvider:
 
-        iZoom_provider = iZoom_level
-        if sProvider != 'Esri.NatGeo':
-            continue
+        if sProvider_in is not None:
+            if sProvider != sProvider_in:
+                print(f"Skipping provider {sProvider} because it is not {sProvider_in}")
+                continue
 
         sFilename_output = os.path.join(sWorkspace_output, f'lake_latlon_map_{sProvider}.png')
         print(f"Mapping provider: {sProvider}")
@@ -106,7 +107,7 @@ def main():
     print("map_multiple_vector_files Examples - Qinghai Lake")
     print("=" * 60 + "\n")
 
-    example_map_all_providers()
+    example_map_all_providers(sProvider_in = 'Esri.WorldTopo')
 
     print("=" * 60)
     print("All examples completed!")
