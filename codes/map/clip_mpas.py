@@ -13,6 +13,6 @@ sFilename_basin_boundary = os.path.join(os.path.dirname(__file__), '..', '..', '
 
 sFilename_out = os.path.join(sWorkspace_output, 'mpas_clipped.geojson')
 
-clip_vector_by_bounding_box(sFilename_mesh, sFilename_basin_boundary, sFilename_out)
+clip_vector_by_bounding_box(sFilename_mesh, sFilename_basin_boundary, sFilename_out, dBuffer_in = 0.1)
 
 print('finished')
