@@ -1,0 +1,16 @@
+{
+"type": "FeatureCollection",
+"name": "cell",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{"type":"Feature","properties":{"cellid":1,"longitude":98.5,"latitude":36.5,"area":9961275585.2073269},"geometry":{"type":"Polygon","coordinates":[[[98.0,36.0,0.0],[99.0,36.0,0.0],[99.0,37.0,0.0],[98.0,37.0,0.0],[98.0,36.0,0.0]]]}},
+{"type":"Feature","properties":{"cellid":2,"longitude":99.5,"latitude":36.5,"area":9961275585.2073269},"geometry":{"type":"Polygon","coordinates":[[[99.0,36.0,0.0],[100.0,36.0,0.0],[100.0,37.0,0.0],[99.0,37.0,0.0],[99.0,36.0,0.0]]]}},
+{"type":"Feature","properties":{"cellid":3,"longitude":100.5,"latitude":36.5,"area":9961275585.2073269},"geometry":{"type":"Polygon","coordinates":[[[100.0,36.0,0.0],[101.0,36.0,0.0],[101.0,37.0,0.0],[100.0,37.0,0.0],[100.0,36.0,0.0]]]}},
+{"type":"Feature","properties":{"cellid":4,"longitude":98.5,"latitude":37.5,"area":9831104952.2640686},"geometry":{"type":"Polygon","coordinates":[[[98.0,37.0,0.0],[99.0,37.0,0.0],[99.0,38.0,0.0],[98.0,38.0,0.0],[98.0,37.0,0.0]]]}},
+{"type":"Feature","properties":{"cellid":5,"longitude":99.5,"latitude":37.5,"area":9831104952.2640686},"geometry":{"type":"Polygon","coordinates":[[[99.0,37.0,0.0],[100.0,37.0,0.0],[100.0,38.0,0.0],[99.0,38.0,0.0],[99.0,37.0,0.0]]]}},
+{"type":"Feature","properties":{"cellid":6,"longitude":100.5,"latitude":37.5,"area":9831104952.2640686},"geometry":{"type":"Polygon","coordinates":[[[100.0,37.0,0.0],[101.0,37.0,0.0],[101.0,38.0,0.0],[100.0,38.0,0.0],[100.0,37.0,0.0]]]}},
+{"type":"Feature","properties":{"cellid":7,"longitude":98.5,"latitude":38.5,"area":9697939889.4922276},"geometry":{"type":"Polygon","coordinates":[[[98.0,38.0,0.0],[99.0,38.0,0.0],[99.0,39.0,0.0],[98.0,39.0,0.0],[98.0,38.0,0.0]]]}},
+{"type":"Feature","properties":{"cellid":8,"longitude":99.5,"latitude":38.5,"area":9697939889.4922276},"geometry":{"type":"Polygon","coordinates":[[[99.0,38.0,0.0],[100.0,38.0,0.0],[100.0,39.0,0.0],[99.0,39.0,0.0],[99.0,38.0,0.0]]]}},
+{"type":"Feature","properties":{"cellid":9,"longitude":100.5,"latitude":38.5,"area":9697939889.4922276},"geometry":{"type":"Polygon","coordinates":[[[100.0,38.0,0.0],[101.0,38.0,0.0],[101.0,39.0,0.0],[100.0,39.0,0.0],[100.0,38.0,0.0]]]}}
+]
+}
