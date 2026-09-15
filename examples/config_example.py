@@ -8,7 +8,7 @@ Shows how to create configurations for different mesh types
 import os
 import json
 from pathlib import Path
-from pyearthmesh.classes.config import ConfigManager
+from pyearthmesh.classes.meshconfig import ConfigManager
 
 # Set up output directory
 output_dir = Path("./test_configs")

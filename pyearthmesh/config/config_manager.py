@@ -1,7 +1,82 @@
 import os
 import json
+import platform
 from pathlib import Path
-from pyearthmesh.classes.config import ConfigManager
+from typing import Any
+from pyearthmesh.classes.meshconfig import ConfigManager
+
+
+# ==============================================================================
+# Workflow configuration loader (merged from the former workflow_config.py)
+#
+# This is the single, sectioned, human-editable configuration schema.  It is the
+# one and only source of truth for a run; there is no intermediate flat config
+# file any more.  ``load_workflow_config`` resolves platform-specific and
+# relative paths and normalises the run date.
+# ==============================================================================
+
+DEFAULT_CONFIG = {
+    "workflow": {"date": None, "mesh_type": "mpas", "case_index": 1, "model": "jigsaw",
+                 "simplify_hydrosheds_river_network": False, "process_coastline": False,
+                 "debug": True, "largest_outlets": 10, "run_on_hpc": False},
+    "resolutions": {"ocean_km": 100, "land_km": 100, "river_network_km": 10, "coastline_km": 10},
+    "paths": {"input_workspace": "", "output_workspace": "./output", "hydrosheds_rivers": "",
+              "region_geometry": "", "dam_vector": ""},
+    "jigsaw": {"standalone": True, "create_directory": True, "hours": 5, "slurm": "slurm"},
+}
+
+
+def _merge(defaults: dict[str, Any], values: dict[str, Any], section: str) -> dict[str, Any]:
+    unknown = set(values) - set(defaults)
+    if unknown:
+        raise ValueError(f"Unknown {section} setting(s): {', '.join(sorted(unknown))}")
+    result = defaults.copy()
+    result.update(values)
+    return result
+
+
+def _select_platform_path(value: Any) -> str:
+    if isinstance(value, str):
+        return value
+    if not isinstance(value, dict):
+        raise ValueError("Path values must be strings or platform-specific objects")
+
+    current_platform = platform.system()
+    selected = value.get(current_platform, value.get("default", ""))
+    if not isinstance(selected, str):
+        raise ValueError(f"Path for {current_platform} must be a string")
+    return selected
+
+
+def load_workflow_config(filename: str | Path) -> dict[str, Any]:
+    """Load a workflow JSON file, apply defaults, and resolve relative paths."""
+    filename = Path(filename).expanduser().resolve()
+    with filename.open(encoding="utf-8") as config_file:
+        raw = json.load(config_file)
+    if not isinstance(raw, dict):
+        raise ValueError("Workflow configuration must contain a JSON object")
+    config = {section: _merge(DEFAULT_CONFIG[section], raw.get(section, {}), section)
+              for section in DEFAULT_CONFIG}
+    config["config_file"] = filename
+    for key, value in config["paths"].items():
+        value = _select_platform_path(value)
+        if value:
+            path = Path(value).expanduser()
+            if not path.is_absolute():
+                path = filename.parent / path
+            config["paths"][key] = str(path.resolve())
+        else:
+            config["paths"][key] = ""
+    if not config["workflow"]["date"]:
+        from datetime import datetime
+        config["workflow"]["date"] = datetime.now().strftime("%Y%m%d")
+    return config
+
+
+# ==============================================================================
+# Legacy mesh-config template pipeline (System A).  Kept for backward
+# compatibility; the new workflow path uses ``create_workflow`` below instead.
+# ==============================================================================
 
 
 def create_template_configuration_file(sFilename_configuration_json, mesh_type="jigsaw", **kwargs):
@@ -153,6 +228,60 @@ def read_configuration_file(
         )
 
     return oCase
+
+
+# ==============================================================================
+# Workflow factory
+#
+# Each mesh type owns a class in the ``pyearthmesh/config/workflows/`` subpackage.
+# ``create_workflow`` loads the single JSON (if given a path), selects the class
+# registered for ``workflow.mesh_type``, and returns an instantiated workflow
+# whose underlying case object has already been built in memory.
+# ==============================================================================
+
+from pyearthmesh.config.workflows import MPASWorkflow  # noqa: E402
+
+_WORKFLOWS = {
+    "mpas": MPASWorkflow,
+}
+
+
+def register_workflow(mesh_type: str, workflow_class) -> None:
+    """Register a workflow class for a mesh type."""
+    _WORKFLOWS[mesh_type.lower()] = workflow_class
+
+
+def get_available_workflow_types():
+    """Return the list of mesh types that have a registered workflow class."""
+    return list(_WORKFLOWS.keys())
+
+
+def create_workflow(config_or_path):
+    """Build the workflow object for a loaded config dict or a JSON file path.
+
+    Args:
+        config_or_path (dict | str | Path): Either an already-loaded config
+            (as returned by ``load_workflow_config``) or a path to a workflow
+            JSON file.
+
+    Returns:
+        BaseWorkflow: An instantiated workflow object with its case built.
+
+    Raises:
+        ValueError: If ``workflow.mesh_type`` has no registered workflow class.
+    """
+    if isinstance(config_or_path, (str, Path)):
+        config = load_workflow_config(config_or_path)
+    else:
+        config = config_or_path
+
+    mesh_type = str(config.get("workflow", {}).get("mesh_type", "")).lower()
+    if mesh_type not in _WORKFLOWS:
+        raise ValueError(
+            f"Unknown mesh_type {mesh_type!r}. "
+            f"Available: {', '.join(sorted(_WORKFLOWS))}"
+        )
+    return _WORKFLOWS[mesh_type](config)
 
 
 

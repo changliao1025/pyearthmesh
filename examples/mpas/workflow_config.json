@@ -1,0 +1,32 @@
+{
+  "workflow": {
+    "date": "20260801",
+    "mesh_type": "mpas",
+    "case_index": 3,
+    "model": "jigsaw",
+    "simplify_hydrosheds_river_network": false,
+    "process_coastline": false,
+    "debug": true,
+    "largest_outlets": 10,
+    "run_on_hpc": true
+  },
+  "resolutions": {
+    "ocean_km": 100,
+    "land_km": 12.5,
+    "river_network_km": 5,
+    "coastline_km": 10
+  },
+  "paths": {
+    "input_workspace": "/qfs/people/liao313/workspace/python/unified_land_river_mesh/data/global/input",
+    "output_workspace": "D:/scratch/04model/jigsaw/qinghaihu",
+    "hydrosheds_rivers": "/data2/share/liaochang/data/raw/hydrology/hydrosheds/hydroriver/asian/HydroRIVERS_v10_as_shp/HydroRIVERS_v10_as.shp",
+    "region_geometry": "D:/data/modeldata/hexwatershed/global/vector/region.geojson",
+    "dam_vector": ""
+  },
+  "jigsaw": {
+    "standalone": true,
+    "create_directory": true,
+    "hours": 3,
+    "slurm": "cpu_single"
+  }
+}

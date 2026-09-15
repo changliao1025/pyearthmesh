@@ -250,26 +250,25 @@ class mpascase():
         )
         ofs_mpas.write(sLine)
         sLine = (
-            "from pyearthmesh.config.config_manager import read_configuration_file"
+            "from pyearthmesh.config.config_manager import create_workflow"
             + "\n"
         )
         ofs_mpas.write(sLine)
         sLine = (
-            "sFilename_configuration_in = "
+            "sFilename_workflow_in = "
             + '"'
             + self.sFilename_model_configuration
             + '"\n'
         )
         ofs_mpas.write(sLine)
         sLine = (
-            "oMPAS = read_configuration_file(sFilename_configuration_in,"
-            + " iFlag_create_directory_in=1)"
+            "oWorkflow = create_workflow(sFilename_workflow_in)"
             + "\n"
         )
         ofs_mpas.write(sLine)
-        sLine = "oMPAS.setup()" + "\n"
+        sLine = "oWorkflow.setup()" + "\n"
         ofs_mpas.write(sLine)
-        sLine = "oMPAS.run()" + "\n"
+        sLine = "oWorkflow.run()" + "\n"
         ofs_mpas.write(sLine)
         sLine = "print('Finished')" + "\n"
         ofs_mpas.write(sLine)

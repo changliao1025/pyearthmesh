@@ -1,97 +1,57 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-MPAS mesh example
-This demonstrates how to create an MPAS mesh using pyearthmesh,
-either by running directly or by submitting an HPC (SLURM) job.
+MPAS mesh example (config-driven workflow).
+
+A single sectioned JSON file (``workflow_config.json``) is the one and only source
+of truth.  It is loaded by ``load_workflow_config`` and handed to
+``create_workflow``, which selects the per-mesh-type workflow class
+(``MPASWorkflow``) and builds the underlying ``mpascase`` in memory -- there is no
+intermediate flat config file any more.
+
+The example then either runs mesh generation directly or generates HPC (SLURM) job
+scripts, depending on ``workflow.run_on_hpc``.
 """
 
 import os
-from pathlib import Path
 
 from pyearthmesh.config.config_manager import (
-    create_template_configuration_file,
-    read_configuration_file,
-)
-from pyearthmesh.utility.change_json_key_value import change_json_key_value
-from shutil import copy2
-
-iCase_index = 1
-sDate = '20260401'
-
-sMesh_type = 'mpas'
-
-# ── Output workspace ──────────────────────────────────────────────────────────
-sWorkspace_output = os.path.join('/compyfs/liao313/04model/pyearthmesh/', sMesh_type)    #'./output/mpas_example'
-#covert to absolute path
-sWorkspace_output = os.path.abspath(sWorkspace_output)
-Path(sWorkspace_output).mkdir(parents=True, exist_ok=True)
-
-# ── Step 1: Create MPAS configuration template ────────────────────────────────
-print("Step 1: Creating MPAS configuration template...")
-sFilename_mpas_configuration_json = os.path.join(
-    sWorkspace_output, 'mpas_configuration.json'
+    load_workflow_config,
+    create_workflow,
 )
 
-config = create_template_configuration_file(
-    sFilename_mpas_configuration_json,
-    mesh_type=sMesh_type,
-    sWorkspace_output=sWorkspace_output,
-    iFlag_global=1,
-    iFlag_run_jigsaw=1,
-)
-print("   * Configuration saved to: " + sFilename_mpas_configuration_json)
+# ── Step 1: Load the single workflow configuration ────────────────────────────
+sFilename_workflow = os.path.join(os.path.dirname(__file__), "workflow_config.json")
+print("Step 1: Loading workflow configuration...")
+print("   * " + sFilename_workflow)
+aWorkflow = load_workflow_config(sFilename_workflow)
 
+# ── Step 2: Build the workflow (selects MPASWorkflow, builds mpascase) ────────
+print("\nStep 2: Creating workflow object...")
+oWorkflow = create_workflow(aWorkflow)
+oMPAS = oWorkflow.case
+print("   * Mesh type:         " + aWorkflow["workflow"]["mesh_type"])
+print("   * Output workspace:  " + oMPAS.sWorkspace_output)
+print("   * Mesh output file:  " + oMPAS.sFilename_mesh)
 
-change_json_key_value(sFilename_mpas_configuration_json, "sWorkspace_output", sWorkspace_output)
+# ── Step 3: Execute (mode + HPC settings come from the config) ────────────────
+aJigsaw = aWorkflow["jigsaw"]
 
-
-# ── Step 2: Read configuration and create mpascase object ─────────────────────
-print("\nStep 2: Reading configuration and creating mpascase object...")
-oMPAS = read_configuration_file(
-    sFilename_mpas_configuration_json,
-    iCase_index_in= iCase_index,
-    sDate_in= sDate,
-    iFlag_create_directory_in=1,
-)
-print("   * mpascase created")
-print("   * Output workspace: " + oMPAS.sWorkspace_output)
-print("   * Mesh output file: " + oMPAS.sFilename_mesh)
-
-sWorkspace_output_case = oMPAS.sWorkspace_output
-
-sFilename_mpas_configuration_copy = os.path.join( sWorkspace_output_case, 'mpas_configuration_copy.json' )
-copy2(sFilename_mpas_configuration_json, sFilename_mpas_configuration_copy)
-
-oMPAS = read_configuration_file(
-    sFilename_mpas_configuration_copy,
-    iCase_index_in= iCase_index,
-    sDate_in= sDate,
-    iFlag_create_directory_in=1,
-)
-
-# ── Choose execution mode ─────────────────────────────────────────────────────
-# Set iFlag_hpc=1 to generate SLURM job scripts instead of running directly.
-iFlag_hpc = 1
-
-if iFlag_hpc == 1:
-
-    # ── Step 4 (HPC): Create SLURM job scripts ────────────────────────────────
-    print("\nStep 4: Creating HPC job scripts...")
-    oMPAS._mpas_create_hpc_job(
-        sSlurm_in='slurm',   # SLURM partition name
-        hours_in=10,          # wall-clock time limit in hours
+if aWorkflow["workflow"].get("run_on_hpc"):
+    print("\nStep 3 (HPC): Creating SLURM job scripts...")
+    oWorkflow.create_hpc_job(
+        slurm=aJigsaw["slurm"],   # SLURM partition name
+        hours=aJigsaw["hours"],   # wall-clock time limit in hours
     )
     print("   * run_mpas.py  written to: " + oMPAS.sWorkspace_output)
     print("   * submit.job   written to: " + oMPAS.sWorkspace_output)
     print("   * Submit with: sbatch " + os.path.join(oMPAS.sWorkspace_output, "submit.job"))
 else:
-    # ── Step 3: Setup workspace directories ───────────────────────────────────────
-    print("\nStep 3: Setting up MPAS workspace...")
-    oMPAS.setup()
-    # ── Step 4 (local): Run MPAS mesh generation directly ─────────────────────
-    print("\nStep 4: Running MPAS mesh generation...")
-    aMpas = oMPAS.run()
+    print("\nStep 3 (local): Setting up MPAS workspace...")
+    oWorkflow.setup()
+
+    print("\nStep 4 (local): Running MPAS mesh generation...")
+    aMpas = oWorkflow.run()
 
     if aMpas is not None:
         print("   * MPAS mesh created: {:d} cells".format(len(aMpas)))

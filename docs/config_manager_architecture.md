@@ -43,7 +43,7 @@ ConfigManager (Orchestrator)
 ### Basic Usage
 
 ```python
-from pyearthmesh.classes.config import ConfigManager
+from pyearthmesh.classes.meshconfig import ConfigManager
 
 # Create a configuration manager for a specific mesh type
 manager = ConfigManager("jigsaw")
@@ -121,7 +121,7 @@ To add support for a new mesh type:
 1. Create a new config class inheriting from `BaseMeshConfig`:
 
 ```python
-from pyearthmesh.classes.config import BaseMeshConfig, ConfigManager
+from pyearthmesh.classes.meshconfig import BaseMeshConfig, ConfigManager
 
 class MyMeshConfig(BaseMeshConfig):
     def get_default_config(self):
@@ -211,7 +211,7 @@ Use `ConfigManager.get_available_mesh_types()` to get a list of all registered m
 The old `JigsawConfigManager` class is still available as an alias to `JigsawConfig` for backward compatibility:
 
 ```python
-from pyearthmesh.classes.config import JigsawConfigManager
+from pyearthmesh.classes.meshconfig import JigsawConfigManager
 
 # This still works
 config = JigsawConfigManager.get_default_config()
