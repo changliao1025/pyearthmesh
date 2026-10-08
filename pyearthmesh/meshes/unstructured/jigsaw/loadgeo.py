@@ -1,7 +1,8 @@
-import geojson
 import numpy as np
 from osgeo import ogr
-from jigsawpy import jigsaw_msh_t, savemsh
+from jigsawpy import jigsaw_msh_t
+
+ogr.DontUseExceptions()
 
 
 def pointgeo(point, nset, eset, nobj, last):
@@ -111,36 +112,46 @@ def readgeo(geom, nset, eset, nobj, last):
     """
     # Authors: Darren Engwirda and Chang Liao
 
-    if geom["type"] == "Point":
+    geom_type = ogr.GT_Flatten(geom.GetGeometryType())
 
-        point = geom["coordinates"]
+    if geom_type == ogr.wkbPoint:
+
+        point = (geom.GetX(), geom.GetY())
 
         nobj, last = pointgeo(point, nset, eset, nobj, last)
 
-    elif geom["type"] == "LineString":
+    elif geom_type == ogr.wkbLineString:
 
-        line = geom["coordinates"]
+        line = geom.GetPoints()
 
         nobj, last = linegeo(line, nset, eset, nobj, last)
 
-    elif geom["type"] == "MultiLineString":
+    elif geom_type == ogr.wkbMultiLineString:
 
-        for line in geom["coordinates"]:
+        for index in range(geom.GetGeometryCount()):
+            nobj, last = readgeo(
+                geom.GetGeometryRef(index), nset, eset, nobj, last
+            )
 
-            nobj, last = linegeo(line, nset, eset, nobj, last)
+    elif geom_type == ogr.wkbPolygon:
 
-    elif geom["type"] == "Polygon":
-
-        for loop in geom["coordinates"]:
-
+        for index in range(geom.GetGeometryCount()):
+            loop = geom.GetGeometryRef(index).GetPoints()
             nobj, last = polygeo(loop, nset, eset, nobj, last)
 
-    elif geom["type"] == "MultiPolygon":
+    elif geom_type == ogr.wkbMultiPolygon:
 
-        for poly in geom["coordinates"]:
-            for loop in poly:
+        for index in range(geom.GetGeometryCount()):
+            nobj, last = readgeo(
+                geom.GetGeometryRef(index), nset, eset, nobj, last
+            )
 
-                nobj, last = polygeo(loop, nset, eset, nobj, last)
+    elif geom_type == ogr.wkbGeometryCollection:
+
+        for index in range(geom.GetGeometryCount()):
+            nobj, last = readgeo(
+                geom.GetGeometryRef(index), nset, eset, nobj, last
+            )
 
     return nobj, last
 
@@ -153,32 +164,33 @@ def loadgeo(name, mesh):
     # Authors: Darren Engwirda
 
     if not isinstance(name, str):
-        raise Exception("Incorrect type: NAME.")
+        raise TypeError("name must be a string")
 
     if not isinstance(mesh, jigsaw_msh_t):
-        raise Exception("Incorrect type: MESH.")
+        raise TypeError("mesh must be a jigsaw_msh_t instance")
 
     nobj = +0
     last = +0
     nset = []
     eset = []
 
-    with open(name) as f:
-        geoj = geojson.load(f)
+    datasource = ogr.Open(name, 0)
+    if datasource is None:
+        raise FileNotFoundError(f"Could not open {name}")
 
-    for feat in geoj["features"]:
+    layer = datasource.GetLayer()
+    if layer is None:
+        raise ValueError(f"Could not read a layer from {name}")
 
-        geom = feat["geometry"]
-
-        if geom["type"] != "GeometryCollection":
-
+    for feature in layer:
+        geom = feature.GetGeometryRef()
+        if geom is not None:
             nobj, last = readgeo(geom, nset, eset, nobj, last)
 
-        else:
+    datasource = None
 
-            for next in geom["geometries"]:
-
-                nobj, last = readgeo(next, nset, eset, nobj, last)
+    if len(nset) == 0:
+        raise ValueError(f"No supported geometry found in {name}")
 
     mesh.vert2 = np.concatenate(nset, axis=0)
     if len(eset) > 0:

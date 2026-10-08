@@ -4,9 +4,7 @@ import importlib.util
 import numpy as np
 from osgeo import ogr, osr, gdal
 from pyearth.gis.geometry.convert_longitude_range import convert_360_to_180
-from pyearth.gis.geometry.international_date_line_utility import (
-    split_international_date_line_polygon_coordinates,
-)
+
 from pyearthmesh.utility.convert_attributes import convert_gcs_attributes_to_meshcell
 from pyearthmesh.meshes.unstructured.jigsaw.run_jigsaw import run_jigsaw
 from pyearthmesh.utility.potentiometric.calculate_potentiometric import (

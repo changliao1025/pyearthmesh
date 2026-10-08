@@ -1,19 +1,24 @@
-from pyearthmesh.meshes.structured.latlon.create_latlon_mesh import create_latlon_mesh
+"""Create a regular Lat-Lon mesh for the Qinghai Lake region.
+
+This example uses the sectioned workflow configuration. The workflow compiler
+translates it into the native Lat-Lon mesh settings before generation.
+"""
+
+from pathlib import Path
+
+from pyearthmesh.config.config_manager import create_workflow
 
 
-#set an example for the qinghai lake
+def main() -> None:
+	config_file = Path(__file__).with_name("workflow_config.json")
+	workflow = create_workflow(config_file)
+	workflow.setup()
+	mesh_cells = workflow.run()
+	print(
+		f"Created {len(mesh_cells)} Lat-Lon cells: "
+		f"{workflow.case.config['sFilename_mesh']}"
+	)
 
-dLongitude_left_in=98.
-dLatitude_bot_in=36.
 
-dLongitude_right_in=101
-dLatitude_top_in=37.5
-
-dResolution_degree_in= 30/3600.0 * 10
-ncolumn_in = int(3 / dResolution_degree_in)
-nrow_in = int(3 / dResolution_degree_in)
-sFilename_output_in= r'C:\\Users\\chang_rnrigc1\\workspace\\python\\pyearthmesh\\data\\qinghaihu\\lake_latlon_10km.geojson'
-pBoundary_in = None
-create_latlon_mesh(dLongitude_left_in, dLatitude_bot_in,
-dResolution_degree_in, ncolumn_in, nrow_in, sFilename_output_in,
- pBoundary_in)
+if __name__ == "__main__":
+	main()

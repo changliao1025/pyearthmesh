@@ -146,6 +146,7 @@ class pympas(pymeshcell):
         # MPAS-specific attributes
         self.iFlag_watershed_boundary_burned: int = 0
         self.dElevation_profile0: float = -9999.0
+        self.dLength_edge: float = 0.0
 
         # Calculate initial properties
         self.calculate_cell_area()
@@ -341,6 +342,7 @@ class pympas(pymeshcell):
             self.calculate_cell_area()
 
         self.dLength = np.sqrt(self.dArea)
+        self.dLength_edge = self.dLength
         return self.dLength
 
     def share_edge(self, other: "pympas") -> int:

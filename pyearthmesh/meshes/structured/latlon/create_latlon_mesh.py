@@ -199,7 +199,7 @@ def create_latlon_mesh(
     # Handle boundary geometry
     # For geometry objects, WKT strings are used to avoid crashes when datasets are closed
     # Reference: https://gdal.org/api/python_gotchas.html
-    if pBoundary_in is None:
+    if pBoundary_in is None or pBoundary_in.strip() == "":
         print("Creating mesh with automatic bounding box boundary")
         try:
             pBoundary = _create_boundary_geometry(

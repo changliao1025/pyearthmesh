@@ -1,32 +1,53 @@
 {
   "workflow": {
-    "date": "20260801",
+    "date": "20260901",
     "mesh_type": "mpas",
-    "case_index": 3,
+    "case_index": 1,
     "model": "jigsaw",
     "simplify_hydrosheds_river_network": false,
     "process_coastline": false,
     "debug": true,
     "largest_outlets": 10,
-    "run_on_hpc": true
+    "run_on_hpc": false
   },
   "resolutions": {
     "ocean_km": 100,
-    "land_km": 12.5,
+    "land_km": 50.0,
     "river_network_km": 5,
-    "coastline_km": 10
+    "coastline_km": 10,
+    "lake_boundary_km": 5,
+    "watershed_boundary_km": 5
   },
   "paths": {
     "input_workspace": "/qfs/people/liao313/workspace/python/unified_land_river_mesh/data/global/input",
-    "output_workspace": "D:/scratch/04model/jigsaw/qinghaihu",
-    "hydrosheds_rivers": "/data2/share/liaochang/data/raw/hydrology/hydrosheds/hydroriver/asian/HydroRIVERS_v10_as_shp/HydroRIVERS_v10_as.shp",
-    "region_geometry": "D:/data/modeldata/hexwatershed/global/vector/region.geojson",
+    "output_workspace": "/Users/changliao/scratch/earthmesh/mpas",
+    "river_network_vector": "/Users/changliao/data/hexwatershed/qinghaihu/vector/flowline_hydroshed_simplified_clipped_clean.geojson",
+    "river_network_raster": "/Users/changliao/data/hexwatershed/qinghaihu/raster/river_networks.tif",
+    "lake_boundary_vector": "/Users/changliao/data/hexwatershed/qinghaihu/vector/lake_boundary_hydrobasins_qinghaihu.geojson",
+    "lake_boundary_raster": "/Users/changliao/data/hexwatershed/qinghaihu/raster/lake_boundary_mask.tif",
+    "watershed_boundary_vector": "",
+    "watershed_boundary_raster": "/Users/changliao/data/hexwatershed/qinghaihu/raster/basin_boundary_mask.tif",
+    "coastline_vector": "",
+    "coastline_raster": "/Users/changliao/scratch/land_ocean_mask_wo_island_buffered_fixed.tif",
+    "region_geometry": "/Users/changliao/data/hexwatershed/global/vector/region.geojson",
     "dam_vector": ""
   },
   "jigsaw": {
     "standalone": true,
     "create_directory": true,
     "hours": 3,
-    "slurm": "cpu_single"
+    "slurm": "cpu_single",
+    "ncolumn_space": 3600,
+    "nrow_space": 1800,
+    "iFlag_geom": true,
+    "iFlag_spac": true,
+    "iFlag_spac_ocean": true,
+    "iFlag_spac_land": true,
+    "iFlag_geom_river_network": true,
+    "iFlag_spac_river_network": true,
+    "iFlag_geom_lake_boundary": true,
+    "iFlag_spac_lake_boundary": true,
+    "iFlag_spac_watershed_boundary": true,
+    "iFlag_spac_coastline": true
   }
 }

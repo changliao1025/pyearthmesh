@@ -125,7 +125,8 @@ class JigsawConfig(BaseMeshConfig):
             "iFlag_spac_watershed_boundary": False,  # Apply watershed boundary-specific spacing
             "iFlag_geom_lake_boundary": False,  # Include lake boundary geometries
             "iFlag_spac_lake_boundary": False,  # Apply lake boundary-specific spacing
-            # Resolution parameters for different features (in degrees)
+            # Resolution parameters for different features (in km)
+            "dResolution_ocean": 100.0,  # Ocean feature spacing
             "dResolution_land": 45.0,  # Land feature spacing
             "dResolution_dam": 4.0,  # Dam feature spacing
             "dResolution_city": 4.0,  # City feature spacing

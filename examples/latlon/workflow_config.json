@@ -1,0 +1,27 @@
+{
+  "workflow": {
+    "date": null,
+    "mesh_type": "latlon",
+    "case_index": 1,
+    "model": "latlon",
+    "debug": false,
+    "run_on_hpc": false
+  },
+  "resolutions": {
+    "degree": 0.16666666666666666
+  },
+  "paths": {
+    "output_workspace": "../../data/qinghaihu",
+    "output_mesh": "lake_latlon_20km.geojson",
+    "region_geometry": ""
+  },
+  "region": {
+    "bbox": {
+      "left": 98.0,
+      "right": 101.0,
+      "bottom": 36.0,
+      "top": 37.5
+    },
+    "wkt": ""
+  }
+}

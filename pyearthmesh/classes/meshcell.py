@@ -170,9 +170,9 @@ class pymeshcell(pypolygon):
                 f"Cell must have at least 3 edges to form a valid polygon, got {nEdge}"
             )
 
-        if len(aVertex) < 4:  # Need at least 3 unique points + 1 closing point
+        if len(aVertex) < 3:
             raise ValueError(
-                f"Cell must have at least 4 points (including closing point), got {len(aVertex)}"
+                f"Cell must have at least 3 vertices, got {len(aVertex)}"
             )
 
         # Convert aEdge to aLine with proper type handling

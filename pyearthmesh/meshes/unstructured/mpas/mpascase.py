@@ -101,10 +101,6 @@ class mpascase():
         else:
             self.sFilename_model_configuration = None
 
-        self.sFilename_mesh = os.path.join(
-            str(Path(self.sWorkspace_output)), "mpas.geojson"
-        )
-
         if "iFlag_run_jigsaw" in aConfig_in:
             self.iFlag_run_jigsaw = int(aConfig_in["iFlag_run_jigsaw"])
         else:
@@ -124,6 +120,10 @@ class mpascase():
         else:
             # use specified output path, also do not add output or input tag
             sPath = self.sWorkspace_output
+
+        self.sFilename_mesh = os.path.join(
+            str(Path(self.sWorkspace_output)), "mpas.geojson"
+        )
 
         if iFlag_create_directory_in == 1:
             Path(sPath).mkdir(parents=True, exist_ok=True)

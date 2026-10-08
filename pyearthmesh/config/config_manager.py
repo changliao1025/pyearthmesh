@@ -1,6 +1,7 @@
 import os
 import json
 import platform
+import warnings
 from pathlib import Path
 from typing import Any
 from pyearthmesh.classes.meshconfig import ConfigManager
@@ -19,10 +20,43 @@ DEFAULT_CONFIG = {
     "workflow": {"date": None, "mesh_type": "mpas", "case_index": 1, "model": "jigsaw",
                  "simplify_hydrosheds_river_network": False, "process_coastline": False,
                  "debug": True, "largest_outlets": 10, "run_on_hpc": False},
-    "resolutions": {"ocean_km": 100, "land_km": 100, "river_network_km": 10, "coastline_km": 10},
+    "resolutions": {"degree": None, "meter": None, "ocean_km": 100, "land_km": 100,
+                    "river_network_km": 10, "coastline_km": 10,
+                    "lake_boundary_km": 10, "watershed_boundary_km": 10,
+                    "dam_km": None, "city_km": None},
     "paths": {"input_workspace": "", "output_workspace": "./output", "hydrosheds_rivers": "",
-              "region_geometry": "", "dam_vector": ""},
-    "jigsaw": {"standalone": True, "create_directory": True, "hours": 5, "slurm": "slurm"},
+              "region_geometry": "", "dam_vector": "", "city_vector": "", "city_raster": "",
+              "river_network_vector": "", "river_network_raster": "",
+              "coastline_vector": "", "coastline_raster": "",
+              "watershed_boundary_vector": "", "watershed_boundary_raster": "",
+              "lake_boundary_vector": "", "lake_boundary_raster": "", "output_mesh": ""},
+    "region": {"bbox": {}, "wkt": "", "longitude_left": None, "longitude_right": None,
+               "latitude_bot": None, "latitude_top": None},
+    "features": {"coastline": False, "simplify_hydrosheds_river_network": False,
+                 "use_tiles": False, "tile_mode": "simple", "nTile": None,
+                 "zone_level": None, "tiles_per_base": None, "isea_type": "ISEA3H",
+                 "convert_to_parquet": False, "check_mesh_quality": False,
+                 "endorheic_lake": True},
+    "jigsaw": {
+        "standalone": True, "create_directory": True, "hours": 5, "slurm": "slurm",
+        "ncolumn_space": 360, "nrow_space": 180,
+        "iFlag_geom": False, "iFlag_spac": False, "iFlag_init": False, "iFlag_opts": False,
+        "iFlag_spac_ocean": False, "iFlag_spac_land": True,
+        "iFlag_geom_dam": False, "iFlag_spac_dam": False,
+        "iFlag_geom_city": False, "iFlag_spac_city": False,
+        "iFlag_geom_river_network": False, "iFlag_spac_river_network": False,
+        "iFlag_geom_coastline": False, "iFlag_spac_coastline": False,
+        "iFlag_geom_watershed_boundary": False, "iFlag_spac_watershed_boundary": False,
+        "iFlag_geom_lake_boundary": False, "iFlag_spac_lake_boundary": False,
+        "dhdx_lim": 0.25, "hfun_hmax": "inf", "hfun_hmin": 0.0,
+        "hfun_scal": "absolute", "mesh_dims": 2, "bisection": -1,
+        "optm_qlim": 0.95, "optm_iter": 32, "optm_qtol": 1.0e-05,
+        "mesh_rad2": 1.5, "mesh_rad3": 2.0, "mesh_eps1": 0.333,
+        "mesh_eps2": 0.333, "mesh_top": 1, "mesh_iter": 3,
+        "geom_mshID": "ellipsoid-mesh", "spac_mshID": "ellipsoid-grid",
+        "FULL_SPHERE_RADIUS": 6371.0, "verbosity": 0,
+        "mesh_kern": "delfront", "optm_kern": "odt+dqdx", "geom_feat": True,
+    },
 }
 
 
@@ -59,6 +93,8 @@ def load_workflow_config(filename: str | Path) -> dict[str, Any]:
               for section in DEFAULT_CONFIG}
     config["config_file"] = filename
     for key, value in config["paths"].items():
+        if key == "output_mesh":
+            continue
         value = _select_platform_path(value)
         if value:
             path = Path(value).expanduser()
@@ -143,6 +179,13 @@ def read_configuration_file(
     Returns:
         object: Case object (jigsawcase, mpascase, or meshcase depending on mesh type)
     """
+    warnings.warn(
+        "read_configuration_file() consumes the legacy flat native config format; "
+        "use create_workflow() with a sectioned workflow config instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
     # Ensure input filenames are strings
     if isinstance(sFilename_configuration_in, Path):
         sFilename_configuration_in = str(sFilename_configuration_in)
@@ -239,10 +282,21 @@ def read_configuration_file(
 # whose underlying case object has already been built in memory.
 # ==============================================================================
 
-from pyearthmesh.config.workflows import MPASWorkflow  # noqa: E402
+from pyearthmesh.config.workflows import (  # noqa: E402
+    HealpixWorkflow,
+    ISEAWorkflow,
+    LatLonWorkflow,
+    MPASWorkflow,
+    RHEALPixWorkflow,
+)
+from pyearthmesh.config.workflows.base import WorkflowSpec  # noqa: E402
 
 _WORKFLOWS = {
+    "healpix": HealpixWorkflow,
+    "isea": ISEAWorkflow,
+    "latlon": LatLonWorkflow,
     "mpas": MPASWorkflow,
+    "rhealpix": RHEALPixWorkflow,
 }
 
 
@@ -254,6 +308,75 @@ def register_workflow(mesh_type: str, workflow_class) -> None:
 def get_available_workflow_types():
     """Return the list of mesh types that have a registered workflow class."""
     return list(_WORKFLOWS.keys())
+
+
+def _workflow_spec_from_config(config: dict[str, Any], mesh_type: str) -> WorkflowSpec:
+    """Normalize a loaded sectioned workflow config into the frontend spec."""
+    workflow = config.get("workflow", {}) or {}
+    paths = config.get("paths", {}) or {}
+    region = dict(config.get("region", {}) or {})
+    region.setdefault("geometry", paths.get("region_geometry"))
+
+    return WorkflowSpec.from_dict(
+        {
+            "mesh_type": mesh_type,
+            "case_index": workflow.get("case_index", 1),
+            "date": workflow.get("date"),
+            "region": region,
+            "resolution": config.get("resolutions", {}) or {},
+            "paths": paths,
+            "execution": {
+                "debug": workflow.get("debug", False),
+                "model": workflow.get("model", "jigsaw"),
+                "run_on_hpc": workflow.get("run_on_hpc", False),
+            },
+            "features": {
+                **(config.get("features", {}) or {}),
+                "jigsaw": config.get("jigsaw", {}) or {},
+                "coastline": workflow.get("process_coastline", False),
+                "simplify_hydrosheds_river_network": workflow.get(
+                    "simplify_hydrosheds_river_network", False
+                ),
+                "jigsaw": config.get("jigsaw", {}) or {},
+            },
+        }
+    )
+
+
+def compile_workflow(spec_or_config):
+    """Compile a generic workflow spec or config dict into the backend-native config.
+
+    This is the two-tier compiler boundary: user-facing workflow data is converted
+    into the mesh-family-specific config expected by the backend generator.
+    """
+    if isinstance(spec_or_config, (str, Path)):
+        spec_or_config = load_workflow_config(spec_or_config)
+
+    if isinstance(spec_or_config, dict):
+        mesh_type = str(spec_or_config.get("workflow", {}).get("mesh_type") or spec_or_config.get("mesh_type") or "").lower()
+        if not mesh_type:
+            raise ValueError("mesh_type is required to compile a workflow")
+        workflow_cls = _WORKFLOWS.get(mesh_type)
+        if workflow_cls is None:
+            raise ValueError(
+                f"Unknown mesh_type {mesh_type!r}. Available: {', '.join(sorted(_WORKFLOWS))}"
+            )
+        if "workflow" in spec_or_config:
+            return workflow_cls.compile_from_spec(
+                _workflow_spec_from_config(spec_or_config, mesh_type)
+            )
+        return workflow_cls.compile_from_spec(spec_or_config)
+
+    if isinstance(spec_or_config, WorkflowSpec):
+        mesh_type = spec_or_config.mesh_type
+        workflow_cls = _WORKFLOWS.get(mesh_type)
+        if workflow_cls is None:
+            raise ValueError(
+                f"Unknown mesh_type {mesh_type!r}. Available: {', '.join(sorted(_WORKFLOWS))}"
+            )
+        return workflow_cls.compile_from_spec(spec_or_config)
+
+    raise TypeError("Expected a workflow spec, config dictionary, or path")
 
 
 def create_workflow(config_or_path):

@@ -1,0 +1,26 @@
+{
+  "workflow": {
+    "date": null,
+    "mesh_type": "rhealpix",
+    "case_index": 1,
+    "model": "rhealpix",
+    "debug": false,
+    "run_on_hpc": false
+  },
+  "resolutions": {
+    "meter": 10000.0
+  },
+  "paths": {
+    "output_workspace": {
+      "Linux": "/compyfs/liao313/04model/pyearthmesh/rhealpix/10km",
+      "default": "./output/rhealpix/10km"
+    },
+    "output_mesh": "rhealpix_mesh.geojson"
+  },
+  "features": {
+    "use_tiles": true,
+    "tile_mode": "base",
+    "convert_to_parquet": true
+  }
+}
+
