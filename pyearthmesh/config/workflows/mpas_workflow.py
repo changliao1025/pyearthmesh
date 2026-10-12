@@ -213,8 +213,17 @@ class MPASWorkflow(BaseWorkflow):
         )
         return self.case
 
-    def create_hpc_job(self, slurm=None, hours=10):
-        """Delegate HPC script generation to the underlying ``mpascase``."""
+    def create_hpc_job(self, slurm=None, hours=None):
+        """Delegate HPC script generation to the underlying ``mpascase``.
+
+        If ``slurm`` or ``hours`` are not provided, values from the workflow's
+        ``jigsaw`` configuration section (defaulting to ``'slurm'`` and 5 hours)
+        are used automatically.
+        """
+        if slurm is None:
+            slurm = self.jigsaw.get("slurm", "slurm")
+        if hours is None:
+            hours = self.jigsaw.get("hours", 5)
         return self.case._mpas_create_hpc_job(sSlurm_in=slurm, hours_in=hours)
 
     @staticmethod

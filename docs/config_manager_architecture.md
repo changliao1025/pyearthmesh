@@ -51,15 +51,8 @@ manager = ConfigManager("jigsaw")
 # Get default configuration
 config = manager.get_default_config()
 
-# Create a configuration file with custom values
-config = manager.create_template_config(
-    "config.json",
-    custom_values={
-        "ncolumn_space": 720,
-        "nrow_space": 360,
-        "dResolution_land": 30.0,
-    }
-)
+# Validate configuration
+manager.validate_config(config)
 ```
 
 ### Working with Different Mesh Types
@@ -217,34 +210,29 @@ from pyearthmesh.classes.meshconfig import JigsawConfigManager
 config = JigsawConfigManager.get_default_config()
 ```
 
-## Integration with config_manager.py
+## Integration with Modern Workflow Pipeline
 
-The `pyearthmesh/config/config_manager.py` module provides high-level functions that use the new `ConfigManager`:
+The `pyearthmesh/config/config_manager.py` module provides the high-level workflow orchestration that uses `ConfigManager` internally as the native parameter provider:
 
 ```python
-from pyearthmesh.config.config_manager import (
-    create_template_configuration_file,
-    read_configuration_file
-)
+from pyearthmesh.config.config_manager import create_workflow, compile_workflow
 
-# Create a configuration file
-config = create_template_configuration_file(
-    "config.json",
-    mesh_type="jigsaw",
-    ncolumn_space=720,
-    nrow_space=360
-)
+# 1. Compile a high-level workflow spec to backend-native configuration
+native_config = compile_workflow({
+    "workflow": {"mesh_type": "mpas"},
+    "resolutions": {"ocean_km": 100, "land_km": 25.0},
+    "paths": {"output_workspace": "./output"},
+})
 
-# Read configuration and create case object
-case = read_configuration_file(
-    "config.json",
-    sWorkspace_output_in="./output"
-)
+# 2. Or create and execute a workflow directly from a workflow configuration file
+workflow = create_workflow("workflow_config.json")
+workflow.setup()
+mesh = workflow.run()
 ```
 
 ## Example
 
-See [`examples/config_example.py`](../examples/config_example.py) for a complete working example demonstrating all features of the new ConfigManager.
+See [`examples/config_example.py`](../examples/config_example.py) and [`examples/mpas/mpas_example.py`](../examples/mpas/mpas_example.py) for complete working examples.
 
 ## Benefits
 

@@ -217,6 +217,41 @@ class BaseWorkflow(ABC):
         return float(km) / 111.32
 
     # ------------------------------------------------------------------
+    # Properties (encapsulate case/config paths)
+    # ------------------------------------------------------------------
+    @property
+    def output_workspace(self) -> str:
+        """Return the resolved output workspace directory for this workflow."""
+        if self.case is not None:
+            if hasattr(self.case, "sWorkspace_output") and self.case.sWorkspace_output:
+                return str(self.case.sWorkspace_output)
+            if hasattr(self.case, "config") and isinstance(self.case.config, dict):
+                ws = self.case.config.get("sWorkspace_output")
+                if ws:
+                    return str(ws)
+        if self.aConfig_mesh and isinstance(self.aConfig_mesh, dict):
+            ws = self.aConfig_mesh.get("sWorkspace_output")
+            if ws:
+                return str(ws)
+        return str(self.paths.get("output_workspace", ""))
+
+    @property
+    def mesh_file(self) -> str:
+        """Return the resolved path to the output mesh file for this workflow."""
+        if self.case is not None:
+            if hasattr(self.case, "sFilename_mesh") and self.case.sFilename_mesh:
+                return str(self.case.sFilename_mesh)
+            if hasattr(self.case, "config") and isinstance(self.case.config, dict):
+                mf = self.case.config.get("sFilename_mesh")
+                if mf:
+                    return str(mf)
+        if self.aConfig_mesh and isinstance(self.aConfig_mesh, dict):
+            mf = self.aConfig_mesh.get("sFilename_mesh")
+            if mf:
+                return str(mf)
+        return str(self.paths.get("output_mesh", ""))
+
+    # ------------------------------------------------------------------
     # Orchestration (delegates to the case object by default)
     # ------------------------------------------------------------------
     def setup(self):

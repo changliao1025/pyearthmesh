@@ -1,8 +1,9 @@
 import pytest
 
-from pyearthmesh.config.config_manager import compile_workflow
-from pyearthmesh.config.config_manager import create_workflow
-from pyearthmesh.config.config_manager import read_configuration_file
+from pyearthmesh.config.config_manager import (
+    compile_workflow,
+    create_workflow,
+)
 
 
 def test_compile_workflow_mpas_from_generic_spec():
@@ -303,8 +304,57 @@ def test_rhealpix_workflow_builds_runtime_adapter(monkeypatch, tmp_path):
     assert captured["kwargs"]["tile_mode"] == "base"
 
 
-def test_legacy_flat_config_reader_warns(tmp_path):
-    with pytest.warns(DeprecationWarning, match="legacy flat native config"):
-        assert read_configuration_file(tmp_path / "missing.json") is None
+
+
+
+def test_workflow_property_accessors(tmp_path):
+    out_dir = str(tmp_path / "output")
+    workflow = create_workflow(
+        {
+            "workflow": {"mesh_type": "healpix"},
+            "resolutions": {"meter": 50000.0},
+            "paths": {"output_workspace": out_dir, "output_mesh": "custom_mesh.geojson"},
+        }
+    )
+
+    assert workflow.output_workspace == out_dir
+    assert workflow.mesh_file == "custom_mesh.geojson"
+
+
+def test_mpas_workflow_create_hpc_job_defaults(monkeypatch):
+    captured = {}
+
+    class FakeMPASCase:
+        def __init__(self, config, **kwargs):
+            self.sWorkspace_output = config.get("sWorkspace_output", "./output")
+            self.sFilename_mesh = "mpas.geojson"
+
+        def _mpas_create_hpc_job(self, sSlurm_in=None, hours_in=10):
+            captured["slurm"] = sSlurm_in
+            captured["hours"] = hours_in
+
+    monkeypatch.setattr(
+        "pyearthmesh.meshes.unstructured.mpas.mpascase.mpascase",
+        FakeMPASCase,
+    )
+
+    workflow = create_workflow(
+        {
+            "workflow": {"mesh_type": "mpas"},
+            "paths": {"output_workspace": "./output"},
+            "jigsaw": {
+                "slurm": "custom_partition",
+                "hours": 8,
+            },
+        }
+    )
+
+    # Calling create_hpc_job with no arguments picks up configured jigsaw values
+    workflow.create_hpc_job()
+    assert captured["slurm"] == "custom_partition"
+    assert captured["hours"] == 8
+    assert workflow.output_workspace == "./output"
+    assert workflow.mesh_file == "mpas.geojson"
+
 
 

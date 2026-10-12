@@ -1,5 +1,6 @@
 import os
 import json
+import warnings
 from pathlib import Path
 from abc import ABC, abstractmethod
 
@@ -20,77 +21,6 @@ class BaseMeshConfig(ABC):
     def get_mesh_type(self):
         """Returns the mesh type identifier"""
         return self.__class__.__name__.replace('Config', '').lower()
-
-    @staticmethod
-    def _sort_config_for_output(config):
-        """Sort a config dict by data type then alphabetically within each type group.
-
-        The ordering of type groups is:
-        1. bool   – flag parameters (iFlag_*, etc.)
-        2. int    – integer parameters
-        3. float  – floating-point parameters
-        4. str    – string parameters
-        5. list   – list parameters
-        6. None   – parameters whose value is None (null in JSON)
-
-        Within each group keys are sorted alphabetically (case-insensitive).
-
-        Args:
-            config (dict): The configuration dictionary to sort.
-
-        Returns:
-            dict: A new ordered dictionary with keys sorted as described.
-        """
-        def _type_rank(value):
-            # bool must come before int because bool is a subclass of int
-            if isinstance(value, bool):
-                return 0
-            if isinstance(value, int):
-                return 1
-            if isinstance(value, float):
-                return 2
-            if isinstance(value, str):
-                return 3
-            if isinstance(value, list):
-                return 4
-            return 5  # None and anything else
-
-        return dict(
-            sorted(
-                config.items(),
-                key=lambda kv: (_type_rank(kv[1]), kv[0].lower()),
-            )
-        )
-
-    def create_template_config(self, output_filename, custom_values=None):
-        """Creates a configuration file with default values, optionally customized.
-
-        This base implementation merges defaults with any user-provided ``custom_values``
-        and writes the result as a JSON file.  Subclasses may override this method to
-        add mesh-specific logic while still calling ``super().create_template_config()``
-        if desired.
-
-        The keys in the output JSON are sorted by data type (bool → int → float →
-        str → list → null) and then alphabetically within each type group.
-
-        Args:
-            output_filename (str or Path): Path to save the configuration file.
-            custom_values (dict, optional): Key/value pairs that override defaults.
-
-        Returns:
-            dict: The final merged configuration that was written to disk.
-        """
-        config = self.get_default_config()
-        if custom_values:
-            config.update(custom_values)
-        self.validate_config(config)
-        config = self._sort_config_for_output(config)
-        output_path = Path(output_filename)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_filename, "w") as f:
-            json.dump(config, f, indent=4)
-        return config
-
 
 class JigsawConfig(BaseMeshConfig):
     """Configuration manager for JIGSAW mesh generation"""
@@ -199,9 +129,14 @@ class JigsawConfig(BaseMeshConfig):
 class MPASConfig(BaseMeshConfig):
     """Configuration manager for MPAS mesh generation"""
 
-    def get_default_config(self):
-        """Returns a dictionary with default MPAS configuration values"""
-        return {
+    def get_default_config(self, include_jigsaw=True):
+        """Returns a dictionary with default MPAS configuration values.
+
+        Args:
+            include_jigsaw (bool): When True (default), merges JIGSAW defaults
+                into the configuration to support JIGSAW mesh generation.
+        """
+        mpas_defaults = {
             # MPAS-specific parameters
             "sFilename_mpas_mesh_netcdf": None,  # MPAS mesh NetCDF file
             "sFilename_jigsaw_mesh_netcdf": None,  # JIGSAW mesh NetCDF file
@@ -221,70 +156,18 @@ class MPASConfig(BaseMeshConfig):
             "dLongitude_right": 180.0,  # Right (east) boundary longitude in degrees
             "mesh_type": "mpas",  # Mesh type identifier
         }
+        if include_jigsaw:
+            jigsaw_defaults = JigsawConfig().get_default_config()
+            jigsaw_defaults.pop("mesh_type", None)
+            config = jigsaw_defaults
+            config.update(mpas_defaults)
+            return config
+        return mpas_defaults
 
     def validate_config(self, config):
         """Validates MPAS configuration"""
         # MPAS can work with minimal configuration
         return True
-
-    def create_template_config(self, output_filename, custom_values=None):
-        """Creates a configuration file for MPAS, merging JIGSAW defaults when
-        ``iFlag_run_jigsaw`` is truthy (either from defaults or ``custom_values``).
-
-        The merge order is:
-        1. JIGSAW defaults (base layer, only when jigsaw is enabled)
-        2. MPAS defaults (override JIGSAW keys where they conflict)
-        3. ``custom_values`` supplied by the caller (highest priority)
-
-        The ``mesh_type`` key is always forced to ``"mpas"`` so that the
-        resulting file is unambiguously identified as an MPAS configuration.
-
-        Keys in the output JSON are sorted by data type (bool → int → float →
-        str → list → null) then alphabetically within each type group.
-
-        Args:
-            output_filename (str or Path): Path to save the configuration file.
-            custom_values (dict, optional): Key/value pairs that override defaults.
-
-        Returns:
-            dict: The final merged configuration that was written to disk.
-        """
-        mpas_defaults = self.get_default_config()
-
-        # Determine whether jigsaw should be included.  Check custom_values
-        # first (caller intent), then fall back to the MPAS default (which is 1).
-        if custom_values and "iFlag_run_jigsaw" in custom_values:
-            run_jigsaw = bool(custom_values["iFlag_run_jigsaw"])
-        else:
-            run_jigsaw = bool(mpas_defaults.get("iFlag_run_jigsaw", 0))
-
-        if run_jigsaw:
-            # Start with JIGSAW defaults as the base layer
-            jigsaw_defaults = JigsawConfig().get_default_config()
-            # Remove the jigsaw-specific mesh_type so MPAS value wins
-            jigsaw_defaults.pop("mesh_type", None)
-            config = jigsaw_defaults
-            # MPAS defaults take precedence over JIGSAW defaults
-            config.update(mpas_defaults)
-        else:
-            config = mpas_defaults.copy()
-
-        # Caller-supplied values have the highest priority
-        if custom_values:
-            config.update(custom_values)
-
-        # Always ensure mesh_type is "mpas"
-        config["mesh_type"] = "mpas"
-
-        self.validate_config(config)
-        config = self._sort_config_for_output(config)
-
-        output_path = Path(output_filename)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_filename, "w") as f:
-            json.dump(config, f, indent=4)
-
-        return config
 
 
 class HealpixConfig(BaseMeshConfig):
@@ -407,7 +290,6 @@ class LatLonConfig(BaseMeshConfig):
                 raise ValueError("Latitude bottom must be less than latitude top")
         return True
 
-    # No create_template_config override needed — base class implementation is sufficient.
     # LatLon meshes do not use JIGSAW.
 
 
@@ -586,13 +468,12 @@ class TINConfig(BaseMeshConfig):
     """Configuration manager for TIN (Triangulated Irregular Network) mesh generation.
 
     TIN meshes are generated via JIGSAW and share most configuration keys with
-    ``JigsawConfig``.  The ``create_template_config`` override merges JIGSAW
-    defaults as the base layer, then applies TIN-specific overrides on top.
+    ``JigsawConfig``.
     """
 
-    def get_default_config(self):
+    def get_default_config(self, include_jigsaw=True):
         """Returns a dictionary with default TIN configuration values"""
-        return {
+        tin_defaults = {
             # TIN-specific parameters
             "sFilename_jigsaw_mesh_netcdf": None,  # JIGSAW mesh NetCDF file
             "pBoundary_wkt": None,                 # Boundary in WKT format
@@ -604,59 +485,17 @@ class TINConfig(BaseMeshConfig):
             "iFlag_save_mesh": 1,                  # Save mesh flag
             "mesh_type": "tin",                    # Mesh type identifier
         }
-
-    def validate_config(self, config):
-        """Validates TIN configuration"""
-        return True
-
-    def create_template_config(self, output_filename, custom_values=None):
-        """Creates a configuration file for TIN, merging JIGSAW defaults when
-        ``iFlag_run_jigsaw`` is truthy.
-
-        The merge order is:
-        1. JIGSAW defaults (base layer, only when jigsaw is enabled)
-        2. TIN defaults (override JIGSAW keys where they conflict)
-        3. ``custom_values`` supplied by the caller (highest priority)
-
-        Keys in the output JSON are sorted by data type (bool → int → float →
-        str → list → null) then alphabetically within each type group.
-
-        Args:
-            output_filename (str or Path): Path to save the configuration file.
-            custom_values (dict, optional): Key/value pairs that override defaults.
-
-        Returns:
-            dict: The final merged configuration that was written to disk.
-        """
-        tin_defaults = self.get_default_config()
-
-        if custom_values and "iFlag_run_jigsaw" in custom_values:
-            run_jigsaw = bool(custom_values["iFlag_run_jigsaw"])
-        else:
-            run_jigsaw = bool(tin_defaults.get("iFlag_run_jigsaw", 0))
-
-        if run_jigsaw:
+        if include_jigsaw:
             jigsaw_defaults = JigsawConfig().get_default_config()
             jigsaw_defaults.pop("mesh_type", None)
             config = jigsaw_defaults
             config.update(tin_defaults)
-        else:
-            config = tin_defaults.copy()
+            return config
+        return tin_defaults
 
-        if custom_values:
-            config.update(custom_values)
-
-        config["mesh_type"] = "tin"
-
-        self.validate_config(config)
-        config = self._sort_config_for_output(config)
-
-        output_path = Path(output_filename)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(output_filename, "w") as f:
-            json.dump(config, f, indent=4)
-
-        return config
+    def validate_config(self, config):
+        """Validates TIN configuration"""
+        return True
 
 
 class DGGRIDConfig(BaseMeshConfig):
@@ -855,51 +694,6 @@ class ConfigManager:
 
         config_instance = self._get_config_instance(mesh_type)
         return config_instance.validate_config(config)
-
-    def create_template_config(self, output_filename, mesh_type=None, custom_values=None):
-        """Create a configuration file with default values, optionally customized.
-
-        Keys in the output JSON are sorted by data type (bool → int → float →
-        str → list → null) then alphabetically within each type group.
-
-        Args:
-            output_filename (str or Path): Path to save the configuration file
-            mesh_type (str, optional): Type of mesh. Uses instance mesh_type if not provided.
-            custom_values (dict, optional): Dictionary of values to override defaults
-
-        Returns:
-            dict: The created configuration
-        """
-        if mesh_type is None:
-            if self.mesh_type is None:
-                raise ValueError("mesh_type must be specified")
-            mesh_type = self.mesh_type
-
-        # Get defaults for the specified mesh type
-        config = self.get_default_config(mesh_type)
-
-        # Apply customizations
-        if custom_values:
-            for key, value in custom_values.items():
-                if isinstance(value, Path):
-                    value = str(value)
-                config[key] = value
-
-        # Validate the configuration
-        self.validate_config(config, mesh_type)
-
-        # Sort by data type then alphabetically
-        config = BaseMeshConfig._sort_config_for_output(config)
-
-        # Ensure directory exists
-        output_path = Path(output_filename)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-
-        # Write to file
-        with open(output_filename, "w") as f:
-            json.dump(config, f, indent=4)
-
-        return config
 
     @staticmethod
     def load_config(filename):
