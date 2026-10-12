@@ -207,7 +207,7 @@ class mpascase(BaseCase):
             )
         return self.aMpas
 
-    def _mpas_create_hpc_job(self, sSlurm_in=None, hours_in=10):
+    def _create_hpc_job(self, sSlurm_in=None, hours_in=10):
         """Create an HPC job for this MPAS mesh-generation simulation.
 
         Generates two files in self.sWorkspace_output:
@@ -331,7 +331,7 @@ class mpascase(BaseCase):
 
     def create_hpc_job(self, slurm=None, hours=10):
         """Generate HPC job scripts for MPAS execution."""
-        return self._mpas_create_hpc_job(sSlurm_in=slurm, hours_in=hours)
+        return self._create_hpc_job(sSlurm_in=slurm, hours_in=hours)
 
 
 # Backward-compatible and uniform adapter naming alias

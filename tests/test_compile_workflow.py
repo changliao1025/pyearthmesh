@@ -218,6 +218,11 @@ def test_isea_workflow_builds_runtime_adapter(monkeypatch, tmp_path):
         captured["kwargs"] = kwargs
         return "fake_mesh_result"
 
+    import sys
+    from unittest.mock import MagicMock
+    if "dggal" not in sys.modules:
+        monkeypatch.setitem(sys.modules, "dggal", MagicMock())
+
     monkeypatch.setattr(
         "pyearthmesh.meshes.structured.dggs.isea.create_isea_mesh.create_isea_mesh",
         fake_create_isea_mesh,
@@ -278,6 +283,11 @@ def test_rhealpix_workflow_builds_runtime_adapter(monkeypatch, tmp_path):
         captured["workspace"] = sWorkspace_output
         captured["kwargs"] = kwargs
         return "fake_rhealpix_result"
+
+    import sys
+    from unittest.mock import MagicMock
+    if "dggal" not in sys.modules:
+        monkeypatch.setitem(sys.modules, "dggal", MagicMock())
 
     monkeypatch.setattr(
         "pyearthmesh.meshes.structured.dggs.healpix.create_rhealpix_mesh.create_rhealpix_mesh",
@@ -355,6 +365,113 @@ def test_mpas_workflow_create_hpc_job_defaults(monkeypatch):
     assert captured["hours"] == 8
     assert workflow.output_workspace == "./output"
     assert workflow.mesh_file == "mpas.geojson"
+
+
+def test_workflow_package_exports():
+    import pyearthmesh.config.workflows as wf
+
+    expected_exports = [
+        "BaseCase",
+        "BaseWorkflow",
+        "WorkflowSpec",
+        "HealpixCase",
+        "HealpixWorkflow",
+        "ISEACase",
+        "ISEAWorkflow",
+        "LatLonCase",
+        "LatLonWorkflow",
+        "MPASCase",
+        "MPASWorkflow",
+        "RHEALPixCase",
+        "RHEALPixWorkflow",
+    ]
+    for name in expected_exports:
+        assert hasattr(wf, name), f"pyearthmesh.config.workflows is missing export: {name}"
+
+
+def test_case_hierarchy_and_api_uniformity():
+    from pyearthmesh.config.workflows import (
+        BaseCase,
+        HealpixCase,
+        ISEACase,
+        LatLonCase,
+        MPASCase,
+        RHEALPixCase,
+    )
+    from pyearthmesh.meshes.unstructured.mpas.mpascase import mpascase
+
+    # MPASCase is the modern alias for mpascase
+    assert MPASCase is mpascase
+
+    cases = [HealpixCase, ISEACase, LatLonCase, RHEALPixCase, MPASCase]
+    required_methods = ["setup", "run", "create_hpc_job"]
+    required_properties = ["output_workspace", "mesh_file", "config"]
+
+    for case_cls in cases:
+        assert issubclass(case_cls, BaseCase), f"{case_cls.__name__} must inherit from BaseCase"
+        for method in required_methods:
+            assert hasattr(case_cls, method) and callable(
+                getattr(case_cls, method)
+            ), f"{case_cls.__name__} missing callable {method}"
+        for prop in required_properties:
+            assert hasattr(case_cls, prop), f"{case_cls.__name__} missing property {prop}"
+
+
+def test_workflows_case_adapter_consistency(tmp_path):
+    import os
+    from pyearthmesh.config.workflows import BaseCase
+
+    out_dir = str(tmp_path / "test_out")
+    test_specs = [
+        ("healpix", {"workflow": {"mesh_type": "healpix"}, "resolutions": {"meter": 1000.0}, "paths": {"output_workspace": out_dir}}),
+        ("latlon", {"workflow": {"mesh_type": "latlon"}, "resolutions": {"degree": 1.0}, "paths": {"output_workspace": out_dir}}),
+        ("isea", {"workflow": {"mesh_type": "isea"}, "resolutions": {"meter": 1000.0}, "paths": {"output_workspace": out_dir}}),
+        ("rhealpix", {"workflow": {"mesh_type": "rhealpix"}, "resolutions": {"meter": 1000.0}, "paths": {"output_workspace": out_dir}}),
+    ]
+
+    for mesh_type, config in test_specs:
+        wf = create_workflow(config)
+        assert isinstance(wf.case, BaseCase), f"{mesh_type} workflow case is not a BaseCase"
+        assert wf.output_workspace == os.path.abspath(out_dir)
+        assert wf.case.output_workspace == os.path.abspath(out_dir)
+        assert isinstance(wf.mesh_file, str)
+        assert isinstance(wf.case.mesh_file, str)
+
+        # Structured cases raise NotImplementedError for HPC jobs
+        with pytest.raises(NotImplementedError):
+            wf.create_hpc_job()
+        with pytest.raises(NotImplementedError):
+            wf.case.create_hpc_job()
+
+
+def test_mpas_case_hpc_job_preserves_cwd(tmp_path):
+    import os
+    from pyearthmesh.config.workflows import MPASCase
+
+    out_dir = str(tmp_path / "mpas_out")
+    config = {
+        "sWorkspace_output": out_dir,
+        "sFilename_mesh": "mpas_mesh.geojson",
+        "iCase_index": 1,
+        "sDate": "20261013",
+        "sModel": "jigsaw",
+    }
+
+    initial_cwd = os.getcwd()
+    case = MPASCase(config, iFlag_create_directory_in=1, sWorkspace_output_in=out_dir)
+
+    assert case.output_workspace == os.path.abspath(out_dir)
+    assert case.mesh_file == "mpas_mesh.geojson"
+    assert case.config["sWorkspace_output"] == os.path.abspath(out_dir)
+    assert case.config["sFilename_mesh"] == "mpas_mesh.geojson"
+
+    # Running create_hpc_job must NOT change current working directory
+    case.create_hpc_job(slurm="slurm", hours=5)
+    assert os.getcwd() == initial_cwd, "create_hpc_job must not mutate os.getcwd()"
+
+    # Backward compatibility alias
+    case._create_hpc_job(sSlurm_in="slurm", hours_in=5)
+    assert os.getcwd() == initial_cwd, "_mpas_create_hpc_job must not mutate os.getcwd()"
 
 
 
