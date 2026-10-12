@@ -4,18 +4,18 @@ import os
 from pathlib import Path
 from typing import Any
 
-from pyearthmesh.config.workflows.base import BaseWorkflow
+from pyearthmesh.config.workflows.base import BaseCase, BaseWorkflow
 
 
-class ISEACase:
+class ISEACase(BaseCase):
     """Runtime adapter for the structured ISEA mesh generator."""
 
     def __init__(self, config: dict[str, Any]):
-        self.config = config
+        super().__init__(config)
 
     def setup(self):
-        Path(self.config["sWorkspace_output"]).mkdir(parents=True, exist_ok=True)
-        return self.config["sWorkspace_output"]
+        Path(self.output_workspace).mkdir(parents=True, exist_ok=True)
+        return self.output_workspace
 
     def run(self):
         from pyearthmesh.meshes.structured.dggs.isea.create_isea_mesh import (

@@ -10,6 +10,9 @@ import os
 from typing import Any
 
 from pyearthmesh.config.workflows.base import BaseWorkflow
+from pyearthmesh.meshes.unstructured.mpas.mpascase import MPASCase, mpascase
+
+__all__ = ["MPASWorkflow", "MPASCase", "mpascase"]
 
 
 class MPASWorkflow(BaseWorkflow):
@@ -183,18 +186,8 @@ class MPASWorkflow(BaseWorkflow):
             raise ValueError("paths.output_workspace is required")
 
     def build_case(self):
-        """Construct ``mpascase`` from the already-compiled native config."""
-        # Heavy imports are deferred so that importing this module stays cheap and
-        # free of any dependency on config_manager (avoids circular imports).
-        from pyearthmesh.classes.meshconfig import JigsawConfig
+        """Construct the MPAS case adapter from the compiled native config."""
         from pyearthmesh.meshes.unstructured.mpas.mpascase import mpascase
-
-        # Add runtime defaults to the compiled dict in place so the workflow
-        # and the case share one native configuration source.
-        jigsaw_defaults = JigsawConfig().get_default_config()
-        jigsaw_defaults.pop("mesh_type", None)
-        for key, value in jigsaw_defaults.items():
-            self.aConfig_mesh.setdefault(key, value)
 
         sFilename_config = self.config.get("config_file")
         self.aConfig_mesh["sFilename_model_configuration"] = (
@@ -214,7 +207,7 @@ class MPASWorkflow(BaseWorkflow):
         return self.case
 
     def create_hpc_job(self, slurm=None, hours=None):
-        """Delegate HPC script generation to the underlying ``mpascase``.
+        """Delegate HPC script generation to the underlying case adapter.
 
         If ``slurm`` or ``hours`` are not provided, values from the workflow's
         ``jigsaw`` configuration section (defaulting to ``'slurm'`` and 5 hours)
@@ -224,6 +217,8 @@ class MPASWorkflow(BaseWorkflow):
             slurm = self.jigsaw.get("slurm", "slurm")
         if hours is None:
             hours = self.jigsaw.get("hours", 5)
+        if hasattr(self.case, "create_hpc_job"):
+            return self.case.create_hpc_job(slurm=slurm, hours=hours)
         return self.case._mpas_create_hpc_job(sSlurm_in=slurm, hours_in=hours)
 
     @staticmethod

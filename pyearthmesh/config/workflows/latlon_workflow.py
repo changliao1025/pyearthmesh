@@ -4,17 +4,17 @@ import os
 from pathlib import Path
 from typing import Any
 
-from pyearthmesh.config.workflows.base import BaseWorkflow
+from pyearthmesh.config.workflows.base import BaseCase, BaseWorkflow
 
 
-class LatLonCase:
+class LatLonCase(BaseCase):
     """Small runtime adapter for the structured Lat-Lon mesh generator."""
 
     def __init__(self, config: dict[str, Any]):
-        self.config = config
+        super().__init__(config)
 
     def setup(self):
-        output_filename = self.config["sFilename_mesh"]
+        output_filename = self.mesh_file
         Path(output_filename).parent.mkdir(parents=True, exist_ok=True)
         return output_filename
 

@@ -4,10 +4,11 @@ import json
 import datetime
 from pathlib import Path
 from pyearth.system.python.get_python_environment import get_python_environment
+from pyearthmesh.config.workflows.base import BaseCase
 
 sDate_default = datetime.datetime.today().strftime("%Y%m%d")
 
-class mpascase():
+class mpascase(BaseCase):
     iFlag_standalone = 1
     iFlag_create_directory = 1
     iFlag_save_config = 1
@@ -21,6 +22,7 @@ class mpascase():
                          iFlag_create_directory_in=1,
                          sDate_in=None,
                  sWorkspace_output_in=None):
+        super().__init__(aConfig_in)
 
         if "iCase_index" in aConfig_in:
             iCase_index = int(aConfig_in["iCase_index"])
@@ -124,6 +126,8 @@ class mpascase():
         self.sFilename_mesh = os.path.join(
             str(Path(self.sWorkspace_output)), "mpas.geojson"
         )
+        self.config["sWorkspace_output"] = self.sWorkspace_output
+        self.config["sFilename_mesh"] = self.sFilename_mesh
 
         if iFlag_create_directory_in == 1:
             Path(sPath).mkdir(parents=True, exist_ok=True)
@@ -216,7 +220,6 @@ class mpascase():
             sSlurm_in (str, optional): SLURM partition name. Defaults to 'slurm'.
             hours_in  (int, optional): Wall-clock time limit in hours. Defaults to 10.
         """
-        os.chdir(self.sWorkspace_output)
         sConda_env_path, sConda_env_name, env_type = get_python_environment()
 
         # ------------------------------------------------------------------
@@ -325,3 +328,11 @@ class mpascase():
         ofs.write(sLine)
         ofs.close()
         return
+
+    def create_hpc_job(self, slurm=None, hours=10):
+        """Generate HPC job scripts for MPAS execution."""
+        return self._mpas_create_hpc_job(sSlurm_in=slurm, hours_in=hours)
+
+
+# Backward-compatible and uniform adapter naming alias
+MPASCase = mpascase

@@ -96,6 +96,55 @@ class WorkflowSpec:
         }
 
 
+class BaseCase(ABC):
+    """Abstract base runtime adapter for mesh case execution.
+
+    Provides a uniform interface across all mesh types (structured, DGGS,
+    unstructured):
+    - ``self.config`` stores the compiled native mesh configuration dict.
+    - ``setup()`` prepares the output workspace directories.
+    - ``run()`` executes the generator and returns the resulting mesh.
+    - ``output_workspace`` returns the resolved output directory.
+    - ``mesh_file`` returns the primary output file path.
+    - ``create_hpc_job()`` generates batch scripts for clusters (where supported).
+    """
+
+    def __init__(self, config: dict[str, Any]):
+        self.config = dict(config)
+
+    @property
+    def output_workspace(self) -> str:
+        """Resolved output directory for this case."""
+        return str(
+            getattr(self, "sWorkspace_output", None)
+            or self.config.get("sWorkspace_output", "")
+        )
+
+    @property
+    def mesh_file(self) -> str:
+        """Resolved path to the primary output mesh file."""
+        return str(
+            getattr(self, "sFilename_mesh", None)
+            or self.config.get("sFilename_mesh", "")
+        )
+
+    @abstractmethod
+    def setup(self):
+        """Prepare the workspace directories for mesh generation."""
+        pass
+
+    @abstractmethod
+    def run(self):
+        """Execute mesh generation and return the resulting mesh or cells."""
+        pass
+
+    def create_hpc_job(self, slurm=None, hours=10):
+        """Generate HPC job scripts for execution on a cluster."""
+        raise NotImplementedError(
+            f"{self.__class__.__name__} does not implement create_hpc_job"
+        )
+
+
 class BaseWorkflow(ABC):
     """Turn a loaded, sectioned workflow config into a runnable mesh case."""
 
@@ -223,6 +272,8 @@ class BaseWorkflow(ABC):
     def output_workspace(self) -> str:
         """Return the resolved output workspace directory for this workflow."""
         if self.case is not None:
+            if hasattr(self.case, "output_workspace") and self.case.output_workspace:
+                return str(self.case.output_workspace)
             if hasattr(self.case, "sWorkspace_output") and self.case.sWorkspace_output:
                 return str(self.case.sWorkspace_output)
             if hasattr(self.case, "config") and isinstance(self.case.config, dict):
@@ -239,6 +290,8 @@ class BaseWorkflow(ABC):
     def mesh_file(self) -> str:
         """Return the resolved path to the output mesh file for this workflow."""
         if self.case is not None:
+            if hasattr(self.case, "mesh_file") and self.case.mesh_file:
+                return str(self.case.mesh_file)
             if hasattr(self.case, "sFilename_mesh") and self.case.sFilename_mesh:
                 return str(self.case.sFilename_mesh)
             if hasattr(self.case, "config") and isinstance(self.case.config, dict):
@@ -264,6 +317,11 @@ class BaseWorkflow(ABC):
 
     def create_hpc_job(self, slurm=None, hours=10):
         """Generate HPC (SLURM) job scripts for the run."""
+        if self.case is not None:
+            if hasattr(self.case, "create_hpc_job"):
+                return self.case.create_hpc_job(slurm=slurm, hours=hours)
+            if hasattr(self.case, "_mpas_create_hpc_job"):
+                return self.case._mpas_create_hpc_job(sSlurm_in=slurm, hours_in=hours)
         raise NotImplementedError(
             f"{self.__class__.__name__} does not implement create_hpc_job"
         )
