@@ -5,7 +5,6 @@ import subprocess
 import datetime
 from shutil import copy2
 from osgeo import osr, ogr, gdal
-from dggal import Application, DGGRS
 import json
 from typing import List, Dict, Tuple, Optional
 
@@ -14,11 +13,15 @@ from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinat
 from pyearth.gis.gdal.gdal_vector_format_support import get_vector_driver_from_filename
 from pyearthmesh.utility.convert_coordinates import convert_gcs_coordinates_to_meshcell
 
+try:
+    from dggal import Application, DGGRS, pydggal_setup
+    from dggal import *
 
-from dggal import *
-# Initialize the application
-app = Application(appGlobals=globals())
-pydggal_setup(app)
+    # Initialize the application
+    app = Application(appGlobals=globals())
+    pydggal_setup(app)
+except (ImportError, NameError):
+    app = None
 
 
 pDate = datetime.datetime.today()

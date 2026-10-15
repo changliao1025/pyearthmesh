@@ -460,17 +460,18 @@ def test_mpas_case_hpc_job_preserves_cwd(tmp_path):
     initial_cwd = os.getcwd()
     case = MPASCase(config, iFlag_create_directory_in=1, sWorkspace_output_in=out_dir)
 
-    assert case.output_workspace == os.path.abspath(out_dir)
-    assert case.mesh_file == "mpas_mesh.geojson"
-    assert case.config["sWorkspace_output"] == os.path.abspath(out_dir)
-    assert case.config["sFilename_mesh"] == "mpas_mesh.geojson"
+    expected_output_dir = os.path.join(out_dir, case.sCase)
+    assert case.output_workspace == expected_output_dir
+    assert case.sWorkspace_output == expected_output_dir
+    assert case.mesh_file == os.path.join(expected_output_dir, "mpas.geojson")
+    assert case.config["sWorkspace_output"] == expected_output_dir
 
     # Running create_hpc_job must NOT change current working directory
     case.create_hpc_job(slurm="slurm", hours=5)
     assert os.getcwd() == initial_cwd, "create_hpc_job must not mutate os.getcwd()"
 
     # Backward compatibility alias
-    case._create_hpc_job(sSlurm_in="slurm", hours_in=5)
+    case._mpas_create_hpc_job(sSlurm_in="slurm", hours_in=5)
     assert os.getcwd() == initial_cwd, "_mpas_create_hpc_job must not mutate os.getcwd()"
 
 

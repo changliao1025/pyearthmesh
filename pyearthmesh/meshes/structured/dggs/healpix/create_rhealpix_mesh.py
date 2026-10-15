@@ -8,11 +8,14 @@ from osgeo import osr, ogr, gdal
 import json
 from typing import List, Dict, Tuple, Optional
 
-from dggal import *
+try:
+    from dggal import *
 
-# Initialize the application
-app = Application(appGlobals=globals())
-pydggal_setup(app)
+    # Initialize the application
+    app = Application(appGlobals=globals())
+    pydggal_setup(app)
+except (ImportError, NameError):
+    app = None
 
 from pyearth.system.define_global_variables import earth_radius
 from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates

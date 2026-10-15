@@ -88,8 +88,9 @@ class LatLonWorkflow(BaseWorkflow):
         config["pBoundary_wkt"] = region.get("wkt")
         config["iFlag_global"] = int(not bool(config["pBoundary_wkt"]))
 
-        output_workspace = paths.get("output_workspace") or "."
+        output_workspace = paths.get("output_workspace") or "./output"
         output_filename = paths.get("output_mesh") or "latlon_mesh.geojson"
+        config["sWorkspace_output"] = output_workspace
         config["sFilename_mesh"] = os.path.join(output_workspace, output_filename)
         return config
 

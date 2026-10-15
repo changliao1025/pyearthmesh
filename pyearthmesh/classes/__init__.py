@@ -7,9 +7,11 @@ from pyearthmesh.classes.hexagon import pyhexagon
 from pyearthmesh.classes.square import pysquare
 from pyearthmesh.classes.latlon import pylatlon
 from pyearthmesh.classes.link import pycelllink
+from pyearthmesh.classes.base_case import BaseCase
 from pyearthmesh.classes.mpas import pympas
 
 __all__ = [
+    "BaseCase",
     "pyvertex",
     "pyedge",
     "pymeshcell",

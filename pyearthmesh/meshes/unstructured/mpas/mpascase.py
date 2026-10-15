@@ -4,7 +4,7 @@ import json
 import datetime
 from pathlib import Path
 from pyearth.system.python.get_python_environment import get_python_environment
-from pyearthmesh.config.workflows.base import BaseCase
+from pyearthmesh.classes.base_case import BaseCase
 
 sDate_default = datetime.datetime.today().strftime("%Y%m%d")
 
@@ -207,7 +207,7 @@ class mpascase(BaseCase):
             )
         return self.aMpas
 
-    def _create_hpc_job(self, sSlurm_in=None, hours_in=10):
+    def create_hpc_job(self, slurm=None, hours=10, **kwargs):
         """Create an HPC job for this MPAS mesh-generation simulation.
 
         Generates two files in self.sWorkspace_output:
@@ -217,9 +217,15 @@ class mpascase(BaseCase):
                            environment and executes run_mpas.py.
 
         Args:
-            sSlurm_in (str, optional): SLURM partition name. Defaults to 'slurm'.
-            hours_in  (int, optional): Wall-clock time limit in hours. Defaults to 10.
+            slurm (str, optional): SLURM partition name. Defaults to 'slurm'.
+            hours (int, optional): Wall-clock time limit in hours. Defaults to 10.
         """
+        if slurm is None:
+            slurm = kwargs.get("sSlurm_in", "slurm")
+        if "hours_in" in kwargs:
+            hours = kwargs["hours_in"]
+        sSlurm_in = slurm
+        hours_in = hours
         sConda_env_path, sConda_env_name, env_type = get_python_environment()
 
         # ------------------------------------------------------------------
@@ -252,6 +258,14 @@ class mpascase(BaseCase):
             + "\n"
         )
         ofs_mpas.write(sLine)
+        sFilename_workflow_in = self.sFilename_model_configuration
+        if not sFilename_workflow_in:
+            sFilename_workflow_in = os.path.join(
+                str(Path(self.sWorkspace_output)), "workflow_config.json"
+            )
+            with open(sFilename_workflow_in, "w") as f_cfg:
+                json.dump(self.config, f_cfg, indent=2)
+
         sLine = (
             "from pyearthmesh.config.config_manager import create_workflow"
             + "\n"
@@ -260,7 +274,7 @@ class mpascase(BaseCase):
         sLine = (
             "sFilename_workflow_in = "
             + '"'
-            + self.sFilename_model_configuration
+            + str(sFilename_workflow_in)
             + '"\n'
         )
         ofs_mpas.write(sLine)
@@ -329,9 +343,8 @@ class mpascase(BaseCase):
         ofs.close()
         return
 
-    def create_hpc_job(self, slurm=None, hours=10):
-        """Generate HPC job scripts for MPAS execution."""
-        return self._create_hpc_job(sSlurm_in=slurm, hours_in=hours)
+    _create_hpc_job = create_hpc_job
+    _mpas_create_hpc_job = create_hpc_job
 
 
 # Backward-compatible and uniform adapter naming alias

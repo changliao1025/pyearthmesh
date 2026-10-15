@@ -271,8 +271,9 @@ class LatLonConfig(BaseMeshConfig):
             # Derived grid dimensions (computed from extent / resolution)
             "ncolumn": 360,              # Number of columns
             "nrow": 180,                 # Number of rows
-            # Output file
+            # Output file and workspace
             "sFilename_mesh": "latlon_mesh.geojson",  # Output mesh filename
+            "sWorkspace_output": "./output",          # Output directory
             # Boundary
             "pBoundary_wkt": None,       # Boundary polygon in WKT (None = auto bbox)
             # Common flags

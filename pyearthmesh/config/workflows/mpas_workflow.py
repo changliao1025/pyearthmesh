@@ -219,7 +219,7 @@ class MPASWorkflow(BaseWorkflow):
             hours = self.jigsaw.get("hours", 5)
         if hasattr(self.case, "create_hpc_job"):
             return self.case.create_hpc_job(slurm=slurm, hours=hours)
-        return self.case._create_hpc_job(sSlurm_in=slurm, hours_in=hours)
+        return self.case._mpas_create_hpc_job(sSlurm_in=slurm, hours_in=hours)
 
     @staticmethod
     def _boundary_wkt_from_geojson(sFilename_region):
