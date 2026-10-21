@@ -45,6 +45,24 @@ extensions = [
     "myst_parser",  # Markdown support (.md)
 ]
 
+# Mock heavy C/C++ dependencies so Read the Docs builds without compiling GDAL/JIGSAW
+autodoc_mock_imports = [
+    "gdal",
+    "osgeo",
+    "ogr",
+    "osr",
+    "pyearth",
+    "pyearthbuffer",
+    "jigsawpy",
+    "netCDF4",
+    "shapely",
+    "cartopy",
+    "scipy",
+    "dggal",
+    "zarr",
+    "numcodecs",
+]
+
 # Intersphinx mapping to link to other projects
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
