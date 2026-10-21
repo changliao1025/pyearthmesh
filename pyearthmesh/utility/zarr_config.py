@@ -4,7 +4,9 @@ Zarr configuration and constants for mesh storage.
 This module provides configuration parameters, data type mappings, and
 compression settings for storing mesh data in Zarr format.
 """
-from typing import Dict, Any
+
+from typing import Any, Dict
+
 import numpy as np
 
 # Default Zarr configuration
@@ -14,7 +16,7 @@ ZARR_DEFAULTS: Dict[str, Any] = {
     "compression_opts": {
         "cname": "zstd",  # zstd for coordinates/properties, lz4 for IDs
         "clevel": 5,
-        "shuffle": 2  # bit-shuffle for better compression
+        "shuffle": 2,  # bit-shuffle for better compression
     },
     "dtype_mapping": {
         "cell_id": np.int64,
@@ -22,13 +24,9 @@ ZARR_DEFAULTS: Dict[str, Any] = {
         "neighbors": np.int64,
         "properties": np.float32,
         "flags": np.int8,
-        "counts": np.int32
+        "counts": np.int32,
     },
-    "fill_values": {
-        "neighbor_id": -1,
-        "elevation": -9999.0,
-        "flag": -1
-    }
+    "fill_values": {"neighbor_id": -1, "elevation": -9999.0, "flag": -1},
 }
 
 # Mesh type specific configurations
@@ -36,59 +34,31 @@ MESH_TYPE_CONFIGS: Dict[str, Dict[str, Any]] = {
     "dggrid": {
         "max_vertices": 8,  # Hexagons have 6, but allow flexibility
         "max_neighbors": 8,
-        "expected_neighbor_count": 6
+        "expected_neighbor_count": 6,
     },
-    "mpas": {
-        "max_vertices": 10,
-        "max_neighbors": 10,
-        "expected_neighbor_count": 6
-    },
-    "tin": {
-        "max_vertices": 3,
-        "max_neighbors": 3,
-        "expected_neighbor_count": 3
-    },
+    "mpas": {"max_vertices": 10, "max_neighbors": 10, "expected_neighbor_count": 6},
+    "tin": {"max_vertices": 3, "max_neighbors": 3, "expected_neighbor_count": 3},
     "square": {
         "max_vertices": 4,
         "max_neighbors": 8,  # Including diagonals
-        "expected_neighbor_count": 4
+        "expected_neighbor_count": 4,
     },
-    "hexagon": {
-        "max_vertices": 6,
-        "max_neighbors": 6,
-        "expected_neighbor_count": 6
-    },
-    "latlon": {
-        "max_vertices": 4,
-        "max_neighbors": 4,
-        "expected_neighbor_count": 4
-    }
+    "hexagon": {"max_vertices": 6, "max_neighbors": 6, "expected_neighbor_count": 6},
+    "latlon": {"max_vertices": 4, "max_neighbors": 4, "expected_neighbor_count": 4},
 }
 
 # Coordinate reference system defaults
 CRS_DEFAULTS = {
     "default": "EPSG:4326",
     "wgs84": "EPSG:4326",
-    "web_mercator": "EPSG:3857"
+    "web_mercator": "EPSG:3857",
 }
 
 # Compression profiles for different use cases
 COMPRESSION_PROFILES = {
-    "fast": {
-        "cname": "lz4",
-        "clevel": 3,
-        "shuffle": 1
-    },
-    "balanced": {
-        "cname": "zstd",
-        "clevel": 5,
-        "shuffle": 2
-    },
-    "maximum": {
-        "cname": "zstd",
-        "clevel": 9,
-        "shuffle": 2
-    }
+    "fast": {"cname": "lz4", "clevel": 3, "shuffle": 1},
+    "balanced": {"cname": "zstd", "clevel": 5, "shuffle": 2},
+    "maximum": {"cname": "zstd", "clevel": 9, "shuffle": 2},
 }
 
 

@@ -1,6 +1,6 @@
 # PyEarthMesh Architecture Plans & Implementation Registry
 
-This directory contains architectural specifications, implementation plans, and design documents for `pyearthmesh`. 
+This directory contains architectural specifications, implementation plans, and design documents for `pyearthmesh`.
 
 ---
 

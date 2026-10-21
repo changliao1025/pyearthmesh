@@ -3,7 +3,6 @@ import platform
 from pathlib import Path
 from typing import Any
 
-
 # ==============================================================================
 # Workflow configuration loader (merged from the former workflow_config.py)
 #
@@ -13,51 +12,123 @@ from typing import Any
 # relative paths and normalises the run date.
 # ==============================================================================
 
-DEFAULT_CONFIG = {
-    "workflow": {"date": None, "mesh_type": "mpas", "case_index": 1, "model": "jigsaw",
-                 "simplify_hydrosheds_river_network": False, "process_coastline": False,
-                 "debug": True, "largest_outlets": 10, "run_on_hpc": False},
-    "resolutions": {"degree": None, "meter": None, "ocean_km": 100, "land_km": 100,
-                    "river_network_km": 10, "coastline_km": 10,
-                    "lake_boundary_km": 10, "watershed_boundary_km": 10,
-                    "dam_km": None, "city_km": None},
-    "paths": {"input_workspace": "", "output_workspace": "./output", "hydrosheds_rivers": "",
-              "region_geometry": "", "dam_vector": "", "city_vector": "", "city_raster": "",
-              "river_network_vector": "", "river_network_raster": "",
-              "coastline_vector": "", "coastline_raster": "",
-              "watershed_boundary_vector": "", "watershed_boundary_raster": "",
-              "lake_boundary_vector": "", "lake_boundary_raster": "", "output_mesh": ""},
-    "region": {"bbox": {}, "wkt": "", "longitude_left": None, "longitude_right": None,
-               "latitude_bot": None, "latitude_top": None},
-    "features": {"coastline": False, "simplify_hydrosheds_river_network": False,
-                 "use_tiles": False, "tile_mode": "simple", "nTile": None,
-                 "zone_level": None, "tiles_per_base": None, "isea_type": "ISEA3H",
-                 "convert_to_parquet": False, "check_mesh_quality": False,
-                 "endorheic_lake": True},
+DEFAULT_CONFIG: dict[str, dict[str, Any]] = {
+    "workflow": {
+        "date": None,
+        "mesh_type": "mpas",
+        "case_index": 1,
+        "model": "jigsaw",
+        "simplify_hydrosheds_river_network": False,
+        "process_coastline": False,
+        "debug": True,
+        "largest_outlets": 10,
+        "run_on_hpc": False,
+    },
+    "resolutions": {
+        "degree": None,
+        "meter": None,
+        "ocean_km": 100,
+        "land_km": 100,
+        "river_network_km": 10,
+        "coastline_km": 10,
+        "lake_boundary_km": 10,
+        "watershed_boundary_km": 10,
+        "dam_km": None,
+        "city_km": None,
+    },
+    "paths": {
+        "input_workspace": "",
+        "output_workspace": "./output",
+        "hydrosheds_rivers": "",
+        "region_geometry": "",
+        "dam_vector": "",
+        "city_vector": "",
+        "city_raster": "",
+        "river_network_vector": "",
+        "river_network_raster": "",
+        "coastline_vector": "",
+        "coastline_raster": "",
+        "watershed_boundary_vector": "",
+        "watershed_boundary_raster": "",
+        "lake_boundary_vector": "",
+        "lake_boundary_raster": "",
+        "output_mesh": "",
+    },
+    "region": {
+        "bbox": {},
+        "wkt": "",
+        "longitude_left": None,
+        "longitude_right": None,
+        "latitude_bot": None,
+        "latitude_top": None,
+    },
+    "features": {
+        "coastline": False,
+        "simplify_hydrosheds_river_network": False,
+        "use_tiles": False,
+        "tile_mode": "simple",
+        "nTile": None,
+        "zone_level": None,
+        "tiles_per_base": None,
+        "isea_type": "ISEA3H",
+        "convert_to_parquet": False,
+        "check_mesh_quality": False,
+        "endorheic_lake": True,
+    },
     "jigsaw": {
-        "standalone": True, "create_directory": True, "hours": 5, "slurm": "slurm",
-        "ncolumn_space": 360, "nrow_space": 180,
-        "iFlag_geom": False, "iFlag_spac": False, "iFlag_init": False, "iFlag_opts": False,
-        "iFlag_spac_ocean": False, "iFlag_spac_land": True,
-        "iFlag_geom_dam": False, "iFlag_spac_dam": False,
-        "iFlag_geom_city": False, "iFlag_spac_city": False,
-        "iFlag_geom_river_network": False, "iFlag_spac_river_network": False,
-        "iFlag_geom_coastline": False, "iFlag_spac_coastline": False,
-        "iFlag_geom_watershed_boundary": False, "iFlag_spac_watershed_boundary": False,
-        "iFlag_geom_lake_boundary": False, "iFlag_spac_lake_boundary": False,
-        "dhdx_lim": 0.25, "hfun_hmax": "inf", "hfun_hmin": 0.0,
-        "hfun_scal": "absolute", "mesh_dims": 2, "bisection": -1,
-        "optm_qlim": 0.95, "optm_iter": 32, "optm_qtol": 1.0e-05,
-        "mesh_rad2": 1.5, "mesh_rad3": 2.0, "mesh_eps1": 0.333,
-        "mesh_eps2": 0.333, "mesh_top": 1, "mesh_iter": 3,
-        "geom_mshID": "ellipsoid-mesh", "spac_mshID": "ellipsoid-grid",
-        "FULL_SPHERE_RADIUS": 6371.0, "verbosity": 0,
-        "mesh_kern": "delfront", "optm_kern": "odt+dqdx", "geom_feat": True,
+        "standalone": True,
+        "create_directory": True,
+        "hours": 5,
+        "slurm": "slurm",
+        "ncolumn_space": 360,
+        "nrow_space": 180,
+        "iFlag_geom": False,
+        "iFlag_spac": False,
+        "iFlag_init": False,
+        "iFlag_opts": False,
+        "iFlag_spac_ocean": False,
+        "iFlag_spac_land": True,
+        "iFlag_geom_dam": False,
+        "iFlag_spac_dam": False,
+        "iFlag_geom_city": False,
+        "iFlag_spac_city": False,
+        "iFlag_geom_river_network": False,
+        "iFlag_spac_river_network": False,
+        "iFlag_geom_coastline": False,
+        "iFlag_spac_coastline": False,
+        "iFlag_geom_watershed_boundary": False,
+        "iFlag_spac_watershed_boundary": False,
+        "iFlag_geom_lake_boundary": False,
+        "iFlag_spac_lake_boundary": False,
+        "dhdx_lim": 0.25,
+        "hfun_hmax": "inf",
+        "hfun_hmin": 0.0,
+        "hfun_scal": "absolute",
+        "mesh_dims": 2,
+        "bisection": -1,
+        "optm_qlim": 0.95,
+        "optm_iter": 32,
+        "optm_qtol": 1.0e-05,
+        "mesh_rad2": 1.5,
+        "mesh_rad3": 2.0,
+        "mesh_eps1": 0.333,
+        "mesh_eps2": 0.333,
+        "mesh_top": 1,
+        "mesh_iter": 3,
+        "geom_mshID": "ellipsoid-mesh",
+        "spac_mshID": "ellipsoid-grid",
+        "FULL_SPHERE_RADIUS": 6371.0,
+        "verbosity": 0,
+        "mesh_kern": "delfront",
+        "optm_kern": "odt+dqdx",
+        "geom_feat": True,
     },
 }
 
 
-def _merge(defaults: dict[str, Any], values: dict[str, Any], section: str) -> dict[str, Any]:
+def _merge(
+    defaults: dict[str, Any], values: dict[str, Any], section: str
+) -> dict[str, Any]:
     unknown = set(values) - set(defaults)
     if unknown:
         raise ValueError(f"Unknown {section} setting(s): {', '.join(sorted(unknown))}")
@@ -86,8 +157,11 @@ def load_workflow_config(filename: str | Path) -> dict[str, Any]:
         raw = json.load(config_file)
     if not isinstance(raw, dict):
         raise ValueError("Workflow configuration must contain a JSON object")
-    config = {section: _merge(DEFAULT_CONFIG[section], raw.get(section, {}), section)
-              for section in DEFAULT_CONFIG}
+    raw_dict: dict[str, Any] = raw
+    config: dict[str, Any] = {
+        section: _merge(DEFAULT_CONFIG[section], raw_dict.get(section, {}), section)
+        for section in DEFAULT_CONFIG
+    }
     config["config_file"] = filename
     for key, value in config["paths"].items():
         if key == "output_mesh":
@@ -102,6 +176,7 @@ def load_workflow_config(filename: str | Path) -> dict[str, Any]:
             config["paths"][key] = ""
     if not config["workflow"]["date"]:
         from datetime import datetime
+
         config["workflow"]["date"] = datetime.now().strftime("%Y%m%d")
     return config
 
@@ -185,7 +260,11 @@ def compile_workflow(spec_or_config):
         spec_or_config = load_workflow_config(spec_or_config)
 
     if isinstance(spec_or_config, dict):
-        mesh_type = str(spec_or_config.get("workflow", {}).get("mesh_type") or spec_or_config.get("mesh_type") or "").lower()
+        mesh_type = str(
+            spec_or_config.get("workflow", {}).get("mesh_type")
+            or spec_or_config.get("mesh_type")
+            or ""
+        ).lower()
         if not mesh_type:
             raise ValueError("mesh_type is required to compile a workflow")
         workflow_cls = _WORKFLOWS.get(mesh_type)
@@ -237,6 +316,3 @@ def create_workflow(config_or_path):
             f"Available: {', '.join(sorted(_WORKFLOWS))}"
         )
     return _WORKFLOWS[mesh_type](config)
-
-
-

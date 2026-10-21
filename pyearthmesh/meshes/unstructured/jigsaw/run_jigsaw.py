@@ -1,17 +1,27 @@
-import os
-from pathlib import Path
-import shutil
-import math
 import copy
+import math
+import os
+import shutil
 import time
+from pathlib import Path
+
 import numpy as np
 from osgeo import gdal
+
+try:
+    import jigsawpy
+except ImportError:
+    jigsawpy = None
 from pyearth.gis.gdal.read.raster.gdal_read_geotiff_file import gdal_read_geotiff_file
 
 from pyearthmesh.meshes.unstructured.jigsaw.inpoly2 import inpoly2
 from pyearthmesh.meshes.unstructured.jigsaw.loadgeo import loadgeo
-from pyearthmesh.meshes.unstructured.jigsaw.utility import addpoint, addline, addpoly, innerto
-
+from pyearthmesh.meshes.unstructured.jigsaw.utility import (
+    addline,
+    addpoint,
+    addpoly,
+    innerto,
+)
 
 
 def compute_mask(
@@ -132,7 +142,7 @@ def run_jigsaw(
     and mesh configuration information.
 
     The boolean flags MAKE-BOOL control whether mesh
-    information is built from scratch, or if an exitsing an
+    information is built from scratch, or if an
     existing file is to be used. For example, setting
     MAKE-BOOL.SPAC = FALSE relies on an existing spacing
     pattern be available in MESH-PATH/tmp/.

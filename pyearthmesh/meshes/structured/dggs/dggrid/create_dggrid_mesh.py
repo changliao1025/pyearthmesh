@@ -1,22 +1,21 @@
-import os, stat, platform
-import numpy as np
-from pathlib import Path
-import subprocess
 import datetime
+import os
+import platform
+import stat
+import subprocess
+from pathlib import Path
 from shutil import copy2
-from osgeo import osr, ogr, gdal
-from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
+
+import numpy as np
+from osgeo import gdal, ogr, osr
 from pyearth.gis.gdal.gdal_vector_format_support import get_vector_format_from_filename
+from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
+
 from pyearthmesh.meshes.structured import dggs
 from pyearthmesh.utility.convert_coordinates import convert_gcs_coordinates_to_meshcell
 
-
 pDate = datetime.datetime.today()
-sDate_default = (
-    "{:04d}".format(pDate.year)
-    + "{:02d}".format(pDate.month)
-    + "{:02d}".format(pDate.day)
-)
+sDate_default = f"{pDate.year:04d}" + f"{pDate.month:02d}" + f"{pDate.day:02d}"
 
 slash = os.sep
 
@@ -57,7 +56,8 @@ aISEA4H = [
     0.94217,
 ]
 
-def copy_dggrid_binaries_to_output(sWorkspace_output, sFilename_executable_in = None):
+
+def copy_dggrid_binaries_to_output(sWorkspace_output, sFilename_executable_in=None):
 
     if sFilename_executable_in is not None:
         sFilename_executable = sFilename_executable_in
@@ -84,11 +84,12 @@ def copy_dggrid_binaries_to_output(sWorkspace_output, sFilename_executable_in = 
         print("Binary not found in system path.")
         return
 
+
 def generate_dggrid_bash_script(sWorkspace_output):
     sName = "dggrid.ini"
     sFilename_configuration = os.path.join(sWorkspace_output, sName)
     os.chdir(sWorkspace_output)
-    # detemine the system platform
+    # determine the system platform
     # Determine the appropriate executable name for the platform
     system = platform.system()
     if platform.system() == "Windows":
@@ -134,8 +135,15 @@ def generate_dggrid_bash_script(sWorkspace_output):
 
     return
 
-def generate_dggrid_slurm_script(sWorkspace_output,
-                                 sJob_name="dggrid", sPartition="short", iNum_nodes=1, iNum_tasks_per_node=1, iTime_hours=2):
+
+def generate_dggrid_slurm_script(
+    sWorkspace_output,
+    sJob_name="dggrid",
+    sPartition="short",
+    iNum_nodes=1,
+    iNum_tasks_per_node=1,
+    iTime_hours=2,
+):
     sFilename_slurm = os.path.join(str(Path(sWorkspace_output)), "run_dggrid.job")
     ofs = open(sFilename_slurm, "w")
     sLine = "#!/bin/bash\n"
@@ -148,14 +156,20 @@ def generate_dggrid_slurm_script(sWorkspace_output,
     ofs.write(sLine)
     sLine = "#SBATCH --ntasks-per-node=" + str(iNum_tasks_per_node) + "\n"
     ofs.write(sLine)
-    sLine = "#SBATCH --time=" + "{:02d}".format(iTime_hours) + ":00:00" + "\n"
+    sLine = "#SBATCH --time=" + f"{iTime_hours:02d}" + ":00:00" + "\n"
     ofs.write(sLine)
-    #request all resource on the node
+    # request all resource on the node
     sLine = "#SBATCH --exclusive" + "\n"
     ofs.write(sLine)
-    sLine = "#SBATCH --output=" + os.path.join(sWorkspace_output, "dggrid_output.log") + "\n"
+    sLine = (
+        "#SBATCH --output="
+        + os.path.join(sWorkspace_output, "dggrid_output.log")
+        + "\n"
+    )
     ofs.write(sLine)
-    sLine = "#SBATCH --error=" + os.path.join(sWorkspace_output, "dggrid_error.log") + "\n"
+    sLine = (
+        "#SBATCH --error=" + os.path.join(sWorkspace_output, "dggrid_error.log") + "\n"
+    )
     ofs.write(sLine)
     sLine = "cd " + sWorkspace_output + "\n"
     ofs.write(sLine)
@@ -172,6 +186,7 @@ def generate_dggrid_slurm_script(sWorkspace_output,
     ofs.close()
     os.chmod(sFilename_slurm, stat.S_IRWXU)
 
+
 def find_number_range(number, aArray):
     number = float(number)
     nPoint = len(aArray)
@@ -179,6 +194,7 @@ def find_number_range(number, aArray):
         if aArray[i + 1] <= number <= aArray[i]:
             return i  # Return the index of the range where the number falls
     return -1
+
 
 def dggrid_find_index_by_resolution(sDggrid_type, dResolution):
     dResolution = float(dResolution)
@@ -210,17 +226,19 @@ def dggrid_find_resolution_by_index(sDggrid_type, iResolution_index):
 
     return dResolution
 
+
 def dggrid_get_total_number_of_cells(sDggrid_type, iResolution_index):
     if sDggrid_type == "ISEA3H":
         # Aperture 3 scaling
-        nCell_total = 10 * (3 ** iResolution_index) + 2
+        nCell_total = 10 * (3**iResolution_index) + 2
     elif sDggrid_type == "ISEA4H":
         # Aperture 4 scaling
-        nCell_total = 10 * (4 ** iResolution_index) + 2
+        nCell_total = 10 * (4**iResolution_index) + 2
     else:
         raise ValueError(f"Unsupported DGGRID type: {sDggrid_type}")
 
     return nCell_total
+
 
 def create_dggrid_mesh(
     iFlag_global,
@@ -228,7 +246,7 @@ def create_dggrid_mesh(
     sFilename_mesh,
     sWorkspace_output,  # for dggrid
     iResolution_index_in=None,
-    lMax_cells_per_output_file = None,
+    lMax_cells_per_output_file=None,
     sDggrid_type_in=None,
     iFlag_antarctic_in=None,
     iFlag_arctic_in=None,
@@ -253,7 +271,7 @@ def create_dggrid_mesh(
     dResolution = dggrid_find_resolution_by_index(sDggrid_type, iResolution_index)
     print("Resolution is: ", dResolution)
     #
-    sResolution = "{:0d}".format(iResolution_index)
+    sResolution = f"{iResolution_index:0d}"
 
     if sFilename_boundary_in is not None:
         if os.path.isfile(sFilename_boundary_in):
@@ -292,20 +310,22 @@ def create_dggrid_mesh(
         sLine = "update_frequency 5000000" + "\n"
         ofs.write(sLine)
 
-        if lMax_cells_per_output_file is not None:  #split
+        if lMax_cells_per_output_file is not None:  # split
             lMax_cells_per_output_file = int(lMax_cells_per_output_file)
-            sMax_cells_per_output_file = "{:0d}".format(lMax_cells_per_output_file)
+            sMax_cells_per_output_file = f"{lMax_cells_per_output_file:0d}"
             sLine = "max_cells_per_output_file " + sMax_cells_per_output_file + "\n"
             ofs.write(sLine)
         else:
             pass
 
-        if 'shapefile' in sFormat_mesh.lower():
-            print("Using DGGRID built in shapefile output format since the output format is shapefile.")
+        if "shapefile" in sFormat_mesh.lower():
+            print(
+                "Using DGGRID built in shapefile output format since the output format is shapefile."
+            )
             sLine = "cell_output_type SHAPEFILE" + "\n"
             ofs.write(sLine)
 
-            #remove the file extension for shapefile since dggrid will add .shp, .shx, .dbf, etc.
+            # remove the file extension for shapefile since dggrid will add .shp, .shx, .dbf, etc.
             sFilename_mesh = os.path.splitext(sFilename_mesh)[0]
             sLine = "cell_output_file_name " + sFilename_mesh + "\n"
             ofs.write(sLine)
@@ -317,12 +337,11 @@ def create_dggrid_mesh(
             sLine = "cell_output_file_name " + sFilename_mesh + "\n"
             ofs.write(sLine)
 
-
         sLine = "densification 0" + "\n"
         ofs.write(sLine)
 
         ofs.close()
-        # writen normal run script
+        # written normal run script
         generate_dggrid_bash_script(sWorkspace_output)
         generate_dggrid_slurm_script(sWorkspace_output)
         os.chdir(sWorkspace_output)
@@ -337,7 +356,5 @@ def create_dggrid_mesh(
             return
         p = subprocess.Popen(sCommand, shell=True)
         p.wait()
-
-
 
     return

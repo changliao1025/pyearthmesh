@@ -43,10 +43,19 @@ class HealpixWorkflow(BaseWorkflow):
     @classmethod
     def default_config(cls) -> dict[str, Any]:
         return {
-            "workflow": {"date": None, "mesh_type": "healpix", "case_index": 1,
-                         "model": "healpix", "debug": False, "run_on_hpc": False},
+            "workflow": {
+                "date": None,
+                "mesh_type": "healpix",
+                "case_index": 1,
+                "model": "healpix",
+                "debug": False,
+                "run_on_hpc": False,
+            },
             "resolutions": {"meter": 100000.0},
-            "paths": {"output_workspace": "./output", "output_mesh": "healpix_mesh.geojson"},
+            "paths": {
+                "output_workspace": "./output",
+                "output_mesh": "healpix_mesh.geojson",
+            },
             "features": {"use_tiles": False, "tile_mode": "simple"},
         }
 
@@ -82,7 +91,9 @@ class HealpixWorkflow(BaseWorkflow):
         config["nTile"] = features.get("nTile")
         config["zone_level"] = features.get("zone_level")
         config["tiles_per_base"] = features.get("tiles_per_base")
-        config["iFlag_netcdf"] = int(str(config["sFilename_mesh"]).lower().endswith(".nc"))
+        config["iFlag_netcdf"] = int(
+            str(config["sFilename_mesh"]).lower().endswith(".nc")
+        )
         return config
 
     def validate(self) -> None:

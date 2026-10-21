@@ -1,4 +1,3 @@
-
 """Create a Healpix mesh using the unified JSON workflow configuration."""
 
 from pathlib import Path

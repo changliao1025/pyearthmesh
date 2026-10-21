@@ -64,12 +64,12 @@ def inpoly2(vert, node, edge=None, ftol=5.0e-14):
 
     if edge is None:
         # ----------------------------------- set edges if not passed
-        indx = np.arange(0, node.shape[0] - 1)
+        index = np.arange(0, node.shape[0] - 1)
 
         edge = np.zeros((node.shape[0], +2), dtype=np.int32)
 
-        edge[:-1, 0] = indx + 0
-        edge[:-1, 1] = indx + 1
+        edge[:-1, 0] = index + 0
+        edge[:-1, 1] = index + 1
         edge[-1, 0] = node.shape[0] - 1
 
     else:

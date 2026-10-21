@@ -156,7 +156,7 @@ The duplication is not random; it reflects a transition between:
 - sectioned workflow style
 - runtime execution objects
 
-The clean architecture should make these layers explicit and prevent the same fact from being re-declared multiple times.
+The clean architecture should make these layers explicit and prevent the same fact from being redeclared multiple times.
 
 ---
 

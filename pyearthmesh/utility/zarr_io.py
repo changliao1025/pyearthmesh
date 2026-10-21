@@ -5,14 +5,17 @@ This module provides classes and functions for reading and writing
 mesh data in Zarr format, enabling efficient storage and access of
 large meshes with 100+ million cells.
 """
+
 import os
-from typing import List, Optional, Dict, Any, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 from numpy.typing import NDArray
 
 try:
     import zarr
     from numcodecs import Blosc
+
     ZARR_AVAILABLE = True
 except ImportError:
     ZARR_AVAILABLE = False
@@ -21,14 +24,14 @@ except ImportError:
 
 import logging
 
+from pyearthmesh.classes.edge import pyedge
 from pyearthmesh.classes.meshcell import pymeshcell
 from pyearthmesh.classes.vertex import pyvertex
-from pyearthmesh.classes.edge import pyedge
 from pyearthmesh.utility.zarr_config import (
     ZARR_DEFAULTS,
     get_chunk_size_recommendation,
     get_compression_profile,
-    get_mesh_config
+    get_mesh_config,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,7 +60,7 @@ class ZarrMeshWriter:
         mesh_type: str = "dggrid",
         chunk_size: Optional[int] = None,
         compression_profile: str = "balanced",
-        overwrite: bool = False
+        overwrite: bool = False,
     ):
         """
         Initialize Zarr mesh writer.
@@ -79,6 +82,7 @@ class ZarrMeshWriter:
         # Initialize Zarr store
         if overwrite and os.path.exists(output_path):
             import shutil
+
             shutil.rmtree(output_path)
 
         self.store = zarr.DirectoryStore(output_path)
@@ -92,7 +96,7 @@ class ZarrMeshWriter:
         self.compressor = Blosc(
             cname=comp_opts["cname"],
             clevel=comp_opts["clevel"],
-            shuffle=comp_opts["shuffle"]
+            shuffle=comp_opts["shuffle"],
         )
 
         # Statistics
@@ -100,9 +104,7 @@ class ZarrMeshWriter:
         self.initialized = False
 
     def initialize_arrays(
-        self,
-        n_cells: int,
-        attributes: Optional[Dict[str, Any]] = None
+        self, n_cells: int, attributes: Optional[Dict[str, Any]] = None
     ) -> None:
         """
         Initialize Zarr arrays for mesh data.
@@ -115,18 +117,22 @@ class ZarrMeshWriter:
         if self.chunk_size is None:
             self.chunk_size = get_chunk_size_recommendation(n_cells)
 
-        logger.info(f"Initializing Zarr arrays for {n_cells} cells with chunk size {self.chunk_size}")
+        logger.info(
+            f"Initializing Zarr arrays for {n_cells} cells with chunk size {self.chunk_size}"
+        )
 
         # Store global attributes
-        self.root.attrs.update({
-            "mesh_type": self.mesh_type,
-            "n_cells": n_cells,
-            "chunk_size": self.chunk_size,
-            "compression_profile": self.compression_profile,
-            "pyearthmesh_version": "0.1.0",
-            "format_version": "1.0",
-            **(attributes or {})
-        })
+        self.root.attrs.update(
+            {
+                "mesh_type": self.mesh_type,
+                "n_cells": n_cells,
+                "chunk_size": self.chunk_size,
+                "compression_profile": self.compression_profile,
+                "pyearthmesh_version": "0.1.0",
+                "format_version": "1.0",
+                **(attributes or {}),
+            }
+        )
 
         # Cell IDs
         self.root.create_dataset(
@@ -134,7 +140,7 @@ class ZarrMeshWriter:
             shape=(n_cells,),
             chunks=(self.chunk_size,),
             dtype=ZARR_DEFAULTS["dtype_mapping"]["cell_id"],
-            compressor=self.compressor
+            compressor=self.compressor,
         )
 
         # Coordinates group
@@ -144,14 +150,14 @@ class ZarrMeshWriter:
             shape=(n_cells,),
             chunks=(self.chunk_size,),
             dtype=ZARR_DEFAULTS["dtype_mapping"]["coordinates"],
-            compressor=self.compressor
+            compressor=self.compressor,
         )
         coords.create_dataset(
             "center_lat",
             shape=(n_cells,),
             chunks=(self.chunk_size,),
             dtype=ZARR_DEFAULTS["dtype_mapping"]["coordinates"],
-            compressor=self.compressor
+            compressor=self.compressor,
         )
 
         # Vertex coordinates (ragged - use max vertices)
@@ -162,7 +168,7 @@ class ZarrMeshWriter:
             chunks=(self.chunk_size, max_vertices),
             dtype=ZARR_DEFAULTS["dtype_mapping"]["coordinates"],
             fill_value=np.nan,
-            compressor=self.compressor
+            compressor=self.compressor,
         )
         coords.create_dataset(
             "vertices_lat",
@@ -170,7 +176,7 @@ class ZarrMeshWriter:
             chunks=(self.chunk_size, max_vertices),
             dtype=ZARR_DEFAULTS["dtype_mapping"]["coordinates"],
             fill_value=np.nan,
-            compressor=self.compressor
+            compressor=self.compressor,
         )
 
         # Geometry group
@@ -180,28 +186,28 @@ class ZarrMeshWriter:
             shape=(n_cells,),
             chunks=(self.chunk_size,),
             dtype=ZARR_DEFAULTS["dtype_mapping"]["counts"],
-            compressor=self.compressor
+            compressor=self.compressor,
         )
         geom.create_dataset(
             "n_edges",
             shape=(n_cells,),
             chunks=(self.chunk_size,),
             dtype=ZARR_DEFAULTS["dtype_mapping"]["counts"],
-            compressor=self.compressor
+            compressor=self.compressor,
         )
         geom.create_dataset(
             "area",
             shape=(n_cells,),
             chunks=(self.chunk_size,),
             dtype=ZARR_DEFAULTS["dtype_mapping"]["properties"],
-            compressor=self.compressor
+            compressor=self.compressor,
         )
         geom.create_dataset(
             "perimeter",
             shape=(n_cells,),
             chunks=(self.chunk_size,),
             dtype=ZARR_DEFAULTS["dtype_mapping"]["properties"],
-            compressor=self.compressor
+            compressor=self.compressor,
         )
 
         # Topology group
@@ -212,7 +218,7 @@ class ZarrMeshWriter:
             shape=(n_cells,),
             chunks=(self.chunk_size,),
             dtype=ZARR_DEFAULTS["dtype_mapping"]["counts"],
-            compressor=self.compressor
+            compressor=self.compressor,
         )
         topo.create_dataset(
             "neighbor_ids",
@@ -220,7 +226,7 @@ class ZarrMeshWriter:
             chunks=(self.chunk_size, max_neighbors),
             dtype=ZARR_DEFAULTS["dtype_mapping"]["neighbors"],
             fill_value=ZARR_DEFAULTS["fill_values"]["neighbor_id"],
-            compressor=self.compressor
+            compressor=self.compressor,
         )
         topo.create_dataset(
             "neighbor_distances",
@@ -228,7 +234,7 @@ class ZarrMeshWriter:
             chunks=(self.chunk_size, max_neighbors),
             dtype=ZARR_DEFAULTS["dtype_mapping"]["properties"],
             fill_value=np.nan,
-            compressor=self.compressor
+            compressor=self.compressor,
         )
 
         # Properties group
@@ -239,7 +245,7 @@ class ZarrMeshWriter:
             chunks=(self.chunk_size,),
             dtype=ZARR_DEFAULTS["dtype_mapping"]["properties"],
             fill_value=ZARR_DEFAULTS["fill_values"]["elevation"],
-            compressor=self.compressor
+            compressor=self.compressor,
         )
 
         # Flags group
@@ -250,7 +256,7 @@ class ZarrMeshWriter:
             chunks=(self.chunk_size,),
             dtype=ZARR_DEFAULTS["dtype_mapping"]["flags"],
             fill_value=ZARR_DEFAULTS["fill_values"]["flag"],
-            compressor=self.compressor
+            compressor=self.compressor,
         )
         flags.create_dataset(
             "flag_coast",
@@ -258,16 +264,13 @@ class ZarrMeshWriter:
             chunks=(self.chunk_size,),
             dtype=ZARR_DEFAULTS["dtype_mapping"]["flags"],
             fill_value=0,
-            compressor=self.compressor
+            compressor=self.compressor,
         )
 
         self.initialized = True
 
     def write_cells(
-        self,
-        cells: List[pymeshcell],
-        start_index: int = 0,
-        show_progress: bool = True
+        self, cells: List[pymeshcell], start_index: int = 0, show_progress: bool = True
     ) -> None:
         """
         Write mesh cells to Zarr arrays.
@@ -278,13 +281,17 @@ class ZarrMeshWriter:
             show_progress: Whether to show progress
         """
         if not self.initialized:
-            raise RuntimeError("Arrays not initialized. Call initialize_arrays() first.")
+            raise RuntimeError(
+                "Arrays not initialized. Call initialize_arrays() first."
+            )
 
         n_cells = len(cells)
         end_index = start_index + n_cells
 
         if show_progress:
-            logger.info(f"Writing {n_cells} cells to Zarr (indices {start_index} to {end_index})")
+            logger.info(
+                f"Writing {n_cells} cells to Zarr (indices {start_index} to {end_index})"
+            )
 
         # Prepare arrays for batch writing
         cell_ids = np.zeros(n_cells, dtype=np.int64)
@@ -333,7 +340,10 @@ class ZarrMeshWriter:
                 neighbor_ids[i, :nn] = cell.aNeighbor[:nn]
 
                 # Handle distances if available
-                if cell.aNeighbor_distance is not None and len(cell.aNeighbor_distance) > 0:
+                if (
+                    cell.aNeighbor_distance is not None
+                    and len(cell.aNeighbor_distance) > 0
+                ):
                     neighbor_distances[i, :nn] = cell.aNeighbor_distance[:nn]
 
             # Properties
@@ -355,7 +365,9 @@ class ZarrMeshWriter:
         self.root["geometry/perimeter"][start_index:end_index] = perimeters
         self.root["topology/n_neighbors"][start_index:end_index] = n_neighbors
         self.root["topology/neighbor_ids"][start_index:end_index] = neighbor_ids
-        self.root["topology/neighbor_distances"][start_index:end_index] = neighbor_distances
+        self.root["topology/neighbor_distances"][
+            start_index:end_index
+        ] = neighbor_distances
         self.root["properties/elevation_mean"][start_index:end_index] = elevations
         self.root["flags/flag_intersected"][start_index:end_index] = flag_intersected
         self.root["flags/flag_coast"][start_index:end_index] = flag_coast
@@ -367,7 +379,9 @@ class ZarrMeshWriter:
 
     def finalize(self) -> None:
         """Finalize writing and close store."""
-        logger.info(f"Finalized Zarr store with {self.n_cells_written:,} cells at {self.output_path}")
+        logger.info(
+            f"Finalized Zarr store with {self.n_cells_written:,} cells at {self.output_path}"
+        )
         self.store.close()
 
 
@@ -410,7 +424,7 @@ class ZarrMeshReader:
         bbox: Optional[Tuple[float, float, float, float]] = None,
         start_index: Optional[int] = None,
         end_index: Optional[int] = None,
-        max_cells: Optional[int] = None
+        max_cells: Optional[int] = None,
     ) -> List[pymeshcell]:
         """
         Read mesh cells from Zarr store.
@@ -464,7 +478,7 @@ class ZarrMeshReader:
         # Read in chunks to avoid memory issues
         chunk_size = 100000
         for i in range(0, len(indices), chunk_size):
-            chunk_indices = indices[i:i+chunk_size]
+            chunk_indices = indices[i : i + chunk_size]
 
             # Read arrays for this chunk
             cell_ids = self.root["cell_ids"][chunk_indices]
@@ -491,10 +505,12 @@ class ZarrMeshReader:
                     vertices = []
                     for k in range(nv):
                         if not np.isnan(vertices_lon[j, k]):
-                            vertex = pyvertex({
-                                "dLongitude_degree": float(vertices_lon[j, k]),
-                                "dLatitude_degree": float(vertices_lat[j, k])
-                            })
+                            vertex = pyvertex(
+                                {
+                                    "dLongitude_degree": float(vertices_lon[j, k]),
+                                    "dLatitude_degree": float(vertices_lat[j, k]),
+                                }
+                            )
                             vertices.append(vertex)
 
                     # Create edges (simplified - just connecting consecutive vertices)
@@ -510,7 +526,7 @@ class ZarrMeshReader:
                             float(center_lons[j]),
                             float(center_lats[j]),
                             edges,
-                            vertices
+                            vertices,
                         )
 
                         # Set cell attributes
@@ -527,13 +543,23 @@ class ZarrMeshReader:
                         nn = int(n_neighbors[j])
                         if nn > 0:
                             cell.nNeighbor = nn
-                            cell.aNeighbor = [int(neighbor_ids[j, k]) for k in range(nn) if neighbor_ids[j, k] != -1]
-                            cell.aNeighbor_distance = [float(neighbor_distances[j, k]) for k in range(nn) if not np.isnan(neighbor_distances[j, k])]
+                            cell.aNeighbor = [
+                                int(neighbor_ids[j, k])
+                                for k in range(nn)
+                                if neighbor_ids[j, k] != -1
+                            ]
+                            cell.aNeighbor_distance = [
+                                float(neighbor_distances[j, k])
+                                for k in range(nn)
+                                if not np.isnan(neighbor_distances[j, k])
+                            ]
 
                         cells.append(cell)
 
                 except Exception as e:
-                    logger.warning(f"Failed to reconstruct cell at index {chunk_indices[j]}: {e}")
+                    logger.warning(
+                        f"Failed to reconstruct cell at index {chunk_indices[j]}: {e}"
+                    )
                     continue
 
         return cells
@@ -544,7 +570,9 @@ class ZarrMeshReader:
         mask = np.isin(all_ids, cell_ids)
         return np.where(mask)[0]
 
-    def _find_bbox_indices(self, bbox: Tuple[float, float, float, float]) -> NDArray[np.int64]:
+    def _find_bbox_indices(
+        self, bbox: Tuple[float, float, float, float]
+    ) -> NDArray[np.int64]:
         """Find array indices for cells within bounding box."""
         lon_min, lat_min, lon_max, lat_max = bbox
 
@@ -552,16 +580,17 @@ class ZarrMeshReader:
         center_lats = self.root["coordinates/center_lat"][:]
 
         mask = (
-            (center_lons >= lon_min) &
-            (center_lons <= lon_max) &
-            (center_lats >= lat_min) &
-            (center_lats <= lat_max)
+            (center_lons >= lon_min)
+            & (center_lons <= lon_max)
+            & (center_lats >= lat_min)
+            & (center_lats <= lat_max)
         )
 
         return np.where(mask)[0]
 
 
 # Convenience functions
+
 
 def write_mesh_to_zarr(
     mesh_cells: List[pymeshcell],
@@ -570,7 +599,7 @@ def write_mesh_to_zarr(
     chunk_size: Optional[int] = None,
     compression_profile: str = "balanced",
     attributes: Optional[Dict[str, Any]] = None,
-    overwrite: bool = False
+    overwrite: bool = False,
 ) -> None:
     """
     Write mesh cells to Zarr format.
@@ -589,7 +618,7 @@ def write_mesh_to_zarr(
         mesh_type=mesh_type,
         chunk_size=chunk_size,
         compression_profile=compression_profile,
-        overwrite=overwrite
+        overwrite=overwrite,
     )
 
     n_cells = len(mesh_cells)
@@ -603,7 +632,7 @@ def read_mesh_from_zarr(
     cell_ids: Optional[List[int]] = None,
     bbox: Optional[Tuple[float, float, float, float]] = None,
     lazy: bool = False,
-    max_cells: Optional[int] = None
+    max_cells: Optional[int] = None,
 ) -> Union[List[pymeshcell], zarr.Group]:
     """
     Read mesh cells from Zarr format.

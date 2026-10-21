@@ -9,17 +9,18 @@ mesh representation.
 
 import json
 from json import JSONEncoder
-from typing import List, Optional, Any, Tuple, Dict
-import numpy as np
+from typing import Any, Dict, List, Optional, Tuple
 
+import numpy as np
 from pyearth.gis.geometry.calculate_polygon_area import calculate_polygon_area
 from pyearth.gis.geometry.calculate_spherical_triangle_area import (
     calculate_spherical_triangle_area,
 )
 
-from pyearthmesh.classes.vertex import pyvertex
 from pyearthmesh.classes.edge import pyedge
 from pyearthmesh.classes.meshcell import pymeshcell
+from pyearthmesh.classes.vertex import pyvertex
+
 
 class TINClassEncoder(JSONEncoder):
     """
@@ -485,7 +486,7 @@ class pytin(pymeshcell):
                 - aspect_ratio: Ratio of longest to shortest side
                 - centroid: Triangle centroid coordinates
         """
-        properties = {
+        properties: Dict[str, Any] = {
             "area": self.dArea,
             "quality": self.triangle_quality,
             "use_spherical": self.use_spherical_calculation,

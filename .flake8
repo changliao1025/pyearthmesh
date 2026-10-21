@@ -11,5 +11,5 @@ max-line-length = 150
 # E741: Ambiguous variable name
 # F811: Redefinition of unused name (conflicts with TYPE_CHECKING guards)
 # F403: Wildcard imports from global variables
-extend-ignore = E203, E501, F401, F841, E402, F541, E741, F811, F403
+extend-ignore = E203, E501, F401, F841, E402, F541, E741, F811, F403, E265, E712, F405
 exclude = .git,__pycache__,build,dist,docs,.venv

@@ -1,12 +1,15 @@
+import datetime
+import json
 import os
 import stat
-import json
-import datetime
 from pathlib import Path
+
 from pyearth.system.python.get_python_environment import get_python_environment
+
 from pyearthmesh.classes.base_case import BaseCase
 
 sDate_default = datetime.datetime.today().strftime("%Y%m%d")
+
 
 class mpascase(BaseCase):
     iFlag_standalone = 1
@@ -18,17 +21,20 @@ class mpascase(BaseCase):
     pBoundary_wkt = None
     aConfig_mesh = None
 
-    def __init__(self, aConfig_in,
-                         iFlag_create_directory_in=1,
-                         sDate_in=None,
-                 sWorkspace_output_in=None):
+    def __init__(
+        self,
+        aConfig_in,
+        iFlag_create_directory_in=1,
+        sDate_in=None,
+        sWorkspace_output_in=None,
+    ):
         super().__init__(aConfig_in)
 
         if "iCase_index" in aConfig_in:
             iCase_index = int(aConfig_in["iCase_index"])
         else:
             iCase_index = 1
-        sCase_index = "{:03d}".format(iCase_index)
+        sCase_index = f"{iCase_index:03d}"
         self.iCase_index = iCase_index
 
         if sDate_in is not None:
@@ -49,7 +55,9 @@ class mpascase(BaseCase):
             self.sFilename_mpas_mesh_netcdf = None
 
         if "sFilename_jigsaw_mesh_netcdf" in aConfig_in:
-            self.sFilename_jigsaw_mesh_netcdf = aConfig_in["sFilename_jigsaw_mesh_netcdf"]
+            self.sFilename_jigsaw_mesh_netcdf = aConfig_in[
+                "sFilename_jigsaw_mesh_netcdf"
+            ]
         else:
             self.sFilename_jigsaw_mesh_netcdf = None
 
@@ -91,7 +99,7 @@ class mpascase(BaseCase):
         else:
             self.dLongitude_right = 180.0
 
-        self.sModel = 'mpas'
+        self.sModel = "mpas"
 
         if "iFlag_global" in aConfig_in:
             self.iFlag_global = int(aConfig_in["iFlag_global"])
@@ -99,7 +107,9 @@ class mpascase(BaseCase):
             self.iFlag_global = 1
 
         if "sFilename_model_configuration" in aConfig_in:
-            self.sFilename_model_configuration = aConfig_in["sFilename_model_configuration"]
+            self.sFilename_model_configuration = aConfig_in[
+                "sFilename_model_configuration"
+            ]
         else:
             self.sFilename_model_configuration = None
 
@@ -170,10 +180,18 @@ class mpascase(BaseCase):
           from the configuration file) is forwarded directly to
           ``create_mpas_mesh``.
         """
-        from pyearthmesh.meshes.unstructured.mpas.create_mpas_mesh import create_mpas_mesh
+        from pyearthmesh.meshes.unstructured.mpas.create_mpas_mesh import (
+            create_mpas_mesh,
+        )
 
-        sWorkspace_jigsaw = self.sWorkspace_output if self.iFlag_run_jigsaw == 1 else None
-        aConfig_jigsaw = getattr(self, 'aConfig_jigsaw', None) if self.iFlag_run_jigsaw == 1 else None
+        sWorkspace_jigsaw = (
+            self.sWorkspace_output if self.iFlag_run_jigsaw == 1 else None
+        )
+        aConfig_jigsaw = (
+            getattr(self, "aConfig_jigsaw", None)
+            if self.iFlag_run_jigsaw == 1
+            else None
+        )
 
         if self.iFlag_antarctic == 1 or self.iFlag_arctic == 1:
             # Polar domain: let create_mpas_mesh handle the boundary internally
@@ -231,9 +249,7 @@ class mpascase(BaseCase):
         # ------------------------------------------------------------------
         # Part 1 – Python driver script (run_mpas.py)
         # ------------------------------------------------------------------
-        sFilename_mpas = os.path.join(
-            str(Path(self.sWorkspace_output)), "run_mpas.py"
-        )
+        sFilename_mpas = os.path.join(str(Path(self.sWorkspace_output)), "run_mpas.py")
         ofs_mpas = open(sFilename_mpas, "w")
 
         sLine = (
@@ -247,7 +263,12 @@ class mpascase(BaseCase):
         sLine = "import os" + "\n"
         ofs_mpas.write(sLine)
         sLine = (
-            "os.environ['PROJ_LIB']=" + '"' + sConda_env_path + "/share/proj" + '"' + "\n"
+            "os.environ['PROJ_LIB']="
+            + '"'
+            + sConda_env_path
+            + "/share/proj"
+            + '"'
+            + "\n"
         )
         ofs_mpas.write(sLine)
         sLine = (
@@ -266,22 +287,11 @@ class mpascase(BaseCase):
             with open(sFilename_workflow_in, "w") as f_cfg:
                 json.dump(self.config, f_cfg, indent=2)
 
-        sLine = (
-            "from pyearthmesh.config.config_manager import create_workflow"
-            + "\n"
-        )
+        sLine = "from pyearthmesh.config.config_manager import create_workflow" + "\n"
         ofs_mpas.write(sLine)
-        sLine = (
-            "sFilename_workflow_in = "
-            + '"'
-            + str(sFilename_workflow_in)
-            + '"\n'
-        )
+        sLine = "sFilename_workflow_in = " + '"' + str(sFilename_workflow_in) + '"\n'
         ofs_mpas.write(sLine)
-        sLine = (
-            "oWorkflow = create_workflow(sFilename_workflow_in)"
-            + "\n"
-        )
+        sLine = "oWorkflow = create_workflow(sFilename_workflow_in)" + "\n"
         ofs_mpas.write(sLine)
         sLine = "oWorkflow.setup()" + "\n"
         ofs_mpas.write(sLine)
@@ -303,7 +313,7 @@ class mpascase(BaseCase):
         ofs.write(sLine)
         sLine = "#SBATCH --job-name=" + self.sModel + "\n"
         ofs.write(sLine)
-        sHour = "{:02d}".format(hours_in)
+        sHour = f"{hours_in:02d}"
         sLine = "#SBATCH -t " + sHour + ":00:00" + "\n"
         ofs.write(sLine)
         sLine = "#SBATCH --nodes=1" + "\n"
@@ -326,7 +336,9 @@ class mpascase(BaseCase):
         ofs.write(sLine)
         sLine = "module load python/miniconda2024May29 " + "\n"
         ofs.write(sLine)
-        sLine = "source /share/apps/python/miniconda2024May29/etc/profile.d/conda.sh" + "\n"
+        sLine = (
+            "source /share/apps/python/miniconda2024May29/etc/profile.d/conda.sh" + "\n"
+        )
         ofs.write(sLine)
         sLine = "conda activate " + sConda_env_name + "\n"
         ofs.write(sLine)

@@ -1,16 +1,18 @@
-import os
-import math
 import importlib.util
+import math
+import os
+
 import numpy as np
-from osgeo import ogr, osr, gdal
+from osgeo import gdal, ogr, osr
 from pyearth.gis.geometry.convert_longitude_range import convert_360_to_180
+from pyearth.gis.idl_handler import (
+    _split_international_date_line_polygon as split_international_date_line_polygon_coordinates,
+)
 
 from pyearthmesh.utility.convert_attributes import convert_gcs_attributes_to_meshcell
 from pyearthmesh.utility.potentiometric.calculate_potentiometric import (
     calculate_potentiometric,
 )
-
-
 
 gdal.UseExceptions()
 
@@ -339,7 +341,7 @@ def create_mpas_mesh(
 
         dummy2 = np.where(aCellOnCellIndex > 0)
         aNeighborIndex = (aCellOnCellIndex[dummy2]).astype(int)
-        aVertexIndexOnEdge = np.array(aVertexOnEdge0[aEdgeIndex - 1, :]).astype((int))
+        aVertexIndexOnEdge = np.array(aVertexOnEdge0[aEdgeIndex - 1, :]).astype(int)
 
         # check dimensions are consistent
         if len(aVertexIndex) == len(aEdgeIndex) and len(aEdgeIndex) == len(
@@ -473,7 +475,7 @@ def create_mpas_mesh(
                         dElevation_profile0, dThickness_ice
                     )
 
-                # call fuction to add the cell
+                # call function to add the cell
                 iFlag_success, aMpas = add_cell_into_list(
                     aMpas,
                     i,
@@ -565,7 +567,7 @@ def create_mpas_mesh(
                             dElevation_profile0, dThickness_ice
                         )
 
-                    # call fuction to add the cell
+                    # call function to add the cell
                     iFlag_success, aMpas = add_cell_into_list(
                         aMpas,
                         i,
@@ -633,9 +635,7 @@ def create_mpas_mesh(
                             iFlag = False
                             continue
                         else:
-                            if (
-                                np.abs(dLon_min - dLon_max) > 100
-                            ):
+                            if np.abs(dLon_min - dLon_max) > 100:
                                 # this polygon cross international date line
                                 # now split this polygon into two parts and check separately
                                 aCoords_gcs_split = (
@@ -723,7 +723,7 @@ def create_mpas_mesh(
                     #        pass
                     # else:
                     #    pass
-                    # call fuction to add the cell
+                    # call function to add the cell
                     iFlag_success, aMpas = add_cell_into_list(
                         aMpas,
                         i,
@@ -759,7 +759,7 @@ def create_mpas_mesh(
         pDataset = None
 
     # for maps we need to clean some cell because they were not actually in the domain
-    # besides, we need to add some smal holes back
+    # besides, we need to add some small holes back
     # to do this, we need two steps.
     if iFlag_global == 1:
         aMpas_out = aMpas

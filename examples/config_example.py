@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
 Example demonstrating the modern two-tier workflow configuration and compilation.
 
@@ -8,8 +7,8 @@ configurations in memory, and demonstrates the low-level backend validation
 provided by ConfigManager.
 """
 
-from pyearthmesh.config.config_manager import compile_workflow
 from pyearthmesh.classes.meshconfig import ConfigManager
+from pyearthmesh.config.config_manager import compile_workflow
 
 print("=" * 80)
 print("pyearthmesh Configuration Architecture Example")
@@ -26,7 +25,9 @@ jigsaw_spec = {
 jigsaw_native = compile_workflow(jigsaw_spec)
 print(f"   * Native mesh type:  {jigsaw_native['mesh_type']}")
 print(f"   * Resolution ocean:  {jigsaw_native['dResolution_ocean']} km")
-print(f"   * Grid dimensions:   {jigsaw_native['ncolumn_space']}x{jigsaw_native['nrow_space']}")
+print(
+    f"   * Grid dimensions:   {jigsaw_native['ncolumn_space']}x{jigsaw_native['nrow_space']}"
+)
 
 # Example 2: Compile an MPAS workflow specification
 print("\n2. Compiling MPAS workflow specification...")
@@ -45,7 +46,10 @@ print("\n3. Compiling HEALPix workflow specification...")
 healpix_spec = {
     "workflow": {"mesh_type": "healpix"},
     "resolutions": {"meter": 50000.0},
-    "paths": {"output_workspace": "./output/healpix_run", "output_mesh": "healpix.geojson"},
+    "paths": {
+        "output_workspace": "./output/healpix_run",
+        "output_mesh": "healpix.geojson",
+    },
     "features": {"use_tiles": False, "tile_mode": "simple"},
 }
 healpix_native = compile_workflow(healpix_spec)
@@ -75,7 +79,9 @@ latlon_spec = {
 }
 latlon_native = compile_workflow(latlon_spec)
 print(f"   * Mesh type:         {latlon_native['mesh_type']}")
-print(f"   * Grid dimensions:   {latlon_native['ncolumn']} columns x {latlon_native['nrow']} rows")
+print(
+    f"   * Grid dimensions:   {latlon_native['ncolumn']} columns x {latlon_native['nrow']} rows"
+)
 
 # Example 6: Query available mesh types from backend registry
 print("\n6. Available mesh types registered in ConfigManager:")

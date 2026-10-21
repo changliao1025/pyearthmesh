@@ -1,13 +1,13 @@
 import numpy as np
 
-from pyearthmesh.classes.vertex import pyvertex
 from pyearthmesh.classes.edge import pyedge
-from pyearthmesh.classes.meshcell import pymeshcell, celltype
-from pyearthmesh.classes.mpas import pympas
 from pyearthmesh.classes.hexagon import pyhexagon
-from pyearthmesh.classes.square import pysquare
 from pyearthmesh.classes.latlon import pylatlon
+from pyearthmesh.classes.meshcell import celltype, pymeshcell
+from pyearthmesh.classes.mpas import pympas
+from pyearthmesh.classes.square import pysquare
 from pyearthmesh.classes.tin import pytin
+from pyearthmesh.classes.vertex import pyvertex
 
 
 def convert_gcs_attributes_to_meshcell(
@@ -53,7 +53,14 @@ def convert_gcs_attributes_to_meshcell(
         mesh_type_id = iMesh_type_in.value
     elif isinstance(iMesh_type_in, str):
         type_str = iMesh_type_in.strip().lower()
-        mapping = {"hexagon": 1, "square": 2, "latlon": 3, "mpas": 4, "tin": 5, "dggrid": 6}
+        mapping = {
+            "hexagon": 1,
+            "square": 2,
+            "latlon": 3,
+            "mpas": 4,
+            "tin": 5,
+            "dggrid": 6,
+        }
         mesh_type_id = mapping.get(type_str, 4)
     else:
         mesh_type_id = int(iMesh_type_in)
@@ -88,16 +95,20 @@ def convert_gcs_attributes_to_meshcell(
                     return None
                 end_idx = dummy_index_1[0]
 
-                pVertex_start = pyvertex({
-                    "dLongitude_degree": float(aCoordinates_gcs_in[start_idx, 0]),
-                    "dLatitude_degree": float(aCoordinates_gcs_in[start_idx, 1]),
-                })
+                pVertex_start = pyvertex(
+                    {
+                        "dLongitude_degree": float(aCoordinates_gcs_in[start_idx, 0]),
+                        "dLatitude_degree": float(aCoordinates_gcs_in[start_idx, 1]),
+                    }
+                )
                 pVertex_start.lVertexID = int(aVertexID_dummy[0])
 
-                pVertex_end = pyvertex({
-                    "dLongitude_degree": float(aCoordinates_gcs_in[end_idx, 0]),
-                    "dLatitude_degree": float(aCoordinates_gcs_in[end_idx, 1]),
-                })
+                pVertex_end = pyvertex(
+                    {
+                        "dLongitude_degree": float(aCoordinates_gcs_in[end_idx, 0]),
+                        "dLatitude_degree": float(aCoordinates_gcs_in[end_idx, 1]),
+                    }
+                )
                 pVertex_end.lVertexID = int(aVertexID_dummy[1])
             else:
                 pVertex_start = aVertex[j]
@@ -119,10 +130,7 @@ def convert_gcs_attributes_to_meshcell(
         pVertex.lVertexID = int(aVertexID_in[i])
         aVertex.append(pVertex)
 
-    aEdge = [
-        pyedge(aVertex[i], aVertex[(i + 1) % npoint])
-        for i in range(npoint)
-    ]
+    aEdge = [pyedge(aVertex[i], aVertex[(i + 1) % npoint]) for i in range(npoint)]
     for i, edge in enumerate(aEdge):
         if i < len(aEdgeID_in):
             edge.lEdgeID = int(aEdgeID_in[i])
@@ -154,10 +162,12 @@ def convert_pcs_attributes_to_meshcell(
 
     aVertex = []
     for i in range(npoint):
-        pVertex = pyvertex({
-            "dLongitude_degree": float(aCoordinates_pcs_in[i, 0]),
-            "dLatitude_degree": float(aCoordinates_pcs_in[i, 1]),
-        })
+        pVertex = pyvertex(
+            {
+                "dLongitude_degree": float(aCoordinates_pcs_in[i, 0]),
+                "dLatitude_degree": float(aCoordinates_pcs_in[i, 1]),
+            }
+        )
         pVertex.lVertexID = int(aVertexID_in[i])
         aVertex.append(pVertex)
 
@@ -171,15 +181,19 @@ def convert_pcs_attributes_to_meshcell(
                 return None
             start_idx = dummy_index_0[0]
             end_idx = dummy_index_1[0]
-            pVertex_start = pyvertex({
-                "dLongitude_degree": float(aCoordinates_pcs_in[start_idx, 0]),
-                "dLatitude_degree": float(aCoordinates_pcs_in[start_idx, 1]),
-            })
+            pVertex_start = pyvertex(
+                {
+                    "dLongitude_degree": float(aCoordinates_pcs_in[start_idx, 0]),
+                    "dLatitude_degree": float(aCoordinates_pcs_in[start_idx, 1]),
+                }
+            )
             pVertex_start.lVertexID = int(aVertexID_dummy[0])
-            pVertex_end = pyvertex({
-                "dLongitude_degree": float(aCoordinates_pcs_in[end_idx, 0]),
-                "dLatitude_degree": float(aCoordinates_pcs_in[end_idx, 1]),
-            })
+            pVertex_end = pyvertex(
+                {
+                    "dLongitude_degree": float(aCoordinates_pcs_in[end_idx, 0]),
+                    "dLatitude_degree": float(aCoordinates_pcs_in[end_idx, 1]),
+                }
+            )
             pVertex_end.lVertexID = int(aVertexID_dummy[1])
         else:
             pVertex_start = aVertex[j]
@@ -189,7 +203,11 @@ def convert_pcs_attributes_to_meshcell(
         pEdge.lEdgeID = int(aEdgeID_in[j])
         aEdge.append(pEdge)
 
-    mesh_type_id = int(iMesh_type_in) if not isinstance(iMesh_type_in, celltype) else iMesh_type_in.value
+    mesh_type_id = (
+        int(iMesh_type_in)
+        if not isinstance(iMesh_type_in, celltype)
+        else iMesh_type_in.value
+    )
     if mesh_type_id == 4:
         return pympas(aEdge, aVertex)
     elif mesh_type_id == 1:

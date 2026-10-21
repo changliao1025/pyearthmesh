@@ -1,5 +1,5 @@
-import numpy as np
 import jigsawpy
+import numpy as np
 
 from pyearthmesh.meshes.unstructured.jigsaw.inpoly2 import inpoly2
 
@@ -143,10 +143,10 @@ def innerto(vert, geom):
     for ipos in range(imin, imax + 1):
 
         # ---------------------------------- inpolygon for POLY=ITAG
-        indx = geom.bound["index"][geom.bound["IDtag"] == ipos]
+        index = geom.bound["index"][geom.bound["IDtag"] == ipos]
 
         xpts = geom.vert2["coord"]
-        edge = geom.edge2["index"][indx]
+        edge = geom.edge2["index"][index]
 
         mask, _ = inpoly2(vert, xpts, edge)
 

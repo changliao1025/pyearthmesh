@@ -103,7 +103,7 @@ class BaseWorkflow(ABC):
     """Turn a loaded, sectioned workflow config into a runnable mesh case."""
 
     #: mesh type identifier used by the factory registry
-    mesh_type = None
+    mesh_type: str | None = None
 
     def __init__(self, config: dict[str, Any]):
         self.config = config
@@ -168,7 +168,8 @@ class BaseWorkflow(ABC):
             "date": self.workflow.get("date"),
             "region": {
                 **self.region,
-                "geometry": self.region.get("geometry") or self.paths.get("region_geometry"),
+                "geometry": self.region.get("geometry")
+                or self.paths.get("region_geometry"),
             },
             "resolution": {
                 "kind": "km",

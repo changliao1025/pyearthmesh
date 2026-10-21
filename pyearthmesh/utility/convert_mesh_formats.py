@@ -4,22 +4,24 @@ Utilities for converting between mesh formats.
 This module provides functions to convert mesh data between different
 formats including any GDAL-supported vector format and Zarr.
 """
-import os
-from typing import Optional, List, Dict, Any
-import logging
-from osgeo import ogr, osr
-import numpy as np
 
-from pyearthmesh.utility.zarr_io import (
-    ZarrMeshWriter,
-    ZarrMeshReader,
-    check_zarr_available
-)
+import logging
+import os
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+from osgeo import ogr, osr
+from pyearth.gis.gdal.gdal_vector_format_support import get_vector_driver_from_filename
+from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
+
+from pyearthmesh.classes.edge import pyedge
 from pyearthmesh.classes.meshcell import pymeshcell
 from pyearthmesh.classes.vertex import pyvertex
-from pyearthmesh.classes.edge import pyedge
-from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
-from pyearth.gis.gdal.gdal_vector_format_support import get_vector_driver_from_filename
+from pyearthmesh.utility.zarr_io import (
+    ZarrMeshReader,
+    ZarrMeshWriter,
+    check_zarr_available,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +32,7 @@ def convert_vector_to_zarr(
     mesh_type: str = "dggrid",
     chunk_size: Optional[int] = None,
     compression_profile: str = "balanced",
-    batch_size: int = 100000
+    batch_size: int = 100000,
 ) -> None:
     """
     Convert any GDAL-supported vector mesh file to Zarr format.
@@ -70,15 +72,15 @@ def convert_vector_to_zarr(
         mesh_type=mesh_type,
         chunk_size=chunk_size,
         compression_profile=compression_profile,
-        overwrite=True
+        overwrite=True,
     )
 
     # Extract metadata
     spatial_ref = layer.GetSpatialRef()
     attributes = {
         "source_file": os.path.basename(input_file),
-        "source_format": os.path.splitext(input_file)[1].lstrip('.'),
-        "crs": spatial_ref.ExportToWkt() if spatial_ref else "EPSG:4326"
+        "source_format": os.path.splitext(input_file)[1].lstrip("."),
+        "crs": spatial_ref.ExportToWkt() if spatial_ref else "EPSG:4326",
     }
 
     writer.initialize_arrays(n_features, attributes)
@@ -137,192 +139,189 @@ def _ogr_feature_to_meshcell(feature: ogr.Feature) -> Optional[pymeshcell]:
         # Extract geometry coordinates
         coords = get_geometry_coordinates(geometry)
         if coords is None or len(coords) < 3:
-      
+            return None
 
-  
         vertices = []
-        for i in range(l
-
-                "dLongitude_degree": float(coords[i, 0]),
-           
-            })
+        for i in range(len(coords) - 1):
+            vertex = pyvertex(
+                {
+                    "dLongitude_degree": float(coords[i, 0]),
+                    "dLatitude_degree": float(coords[i, 1]),
+                }
+            )
             vertices.append(vertex)
 
-        
-   
-        f
-            edge = pyedge(vertices[i], verti
-            ed
+        edges = []
+        for i in range(len(vertices)):
+            edge = pyedge(vertices[i], vertices[(i + 1) % len(vertices)])
+            edges.append(edge)
 
-        # Calculate cente
-        center_lon
-
+        # Calculate center
+        center_lon = float(np.mean(coords[:-1, 0]))
+        center_lat = float(np.mean(coords[:-1, 1]))
 
         # Create meshcell
-        cell =
-            center_
-            center_
+        cell = pymeshcell(
+            center_lon,
+            center_lat,
             edges,
-     
- 
+            vertices,
+        )
 
         # Try to extract cell ID from feature
-    
+        fid = feature.GetFID()
         if fid is not None:
-            cell.lC
+            cell.lCellID = fid
 
         # Try to extract other attributes
-
+        for i in range(feature.GetFieldCount()):
             field_defn = feature.GetFieldDefnRef(i)
-            field_name = field
+            field_name = field_defn.GetName().lower()
             field_value = feature.GetField(i)
 
             if field_value is None:
-    
+                continue
 
             # Map common field names
-
-
-            elif field_name
-                cell
-            elif fi
-                cell.dElevatio
+            if field_name in ("cellid", "cell_id", "id"):
+                cell.lCellID = int(field_value)
+            elif field_name in ("area", "darea"):
+                cell.dArea = float(field_value)
+            elif field_name in ("elevation", "delevation_mean", "elev"):
+                cell.dElevation_mean = float(field_value)
 
         return cell
 
-    except Exce
-        logger.debug(f"Failed to convert f
+    except Exception as e:
+        logger.debug(f"Failed to convert feature: {e}")
         return None
 
 
-def co
-    zarr_p
-    out
+def convert_zarr_to_vector(
+    zarr_path: str,
+    output_file: str,
     cell_ids: Optional[List[int]] = None,
-    bbox: Optional[tu
-
+    bbox: Optional[Tuple[float, float, float, float]] = None,
+) -> None:
     """
- 
+    Convert Zarr mesh to vector format.
 
     The output format is automatically determined from the file extension.
 
     Args:
-        zarr_path: Input Zarr 
-        output_file: Output fil
-        cell_ids: Optional list of 
-        bbox: Optional bounding box (lon_min, la
+        zarr_path: Input Zarr store path
+        output_file: Output file path (.gpkg, .geojson, .shp, etc.)
+        cell_ids: Optional list of cell IDs to export
+        bbox: Optional bounding box (lon_min, lat_min, lon_max, lat_max)
 
     Raises:
-        FileNotFoundError: If Zarr store
-
-    check_z
+        FileNotFoundError: If Zarr store doesn't exist
+        ValueError: If driver cannot be found or file cannot be created
+    """
+    check_zarr_available()
 
     if not os.path.exists(zarr_path):
-        raise F
+        raise FileNotFoundError(f"Zarr store not found: {zarr_path}")
 
-    logger.info(f"Converting Zarr {zarr_pat
+    logger.info(f"Converting Zarr {zarr_path} to vector at {output_file}")
 
-    # 
-    reader = ZarrMeshReade
-
+    reader = ZarrMeshReader(zarr_path)
+    cells = reader.read_cells(cell_ids=cell_ids, bbox=bbox)
 
     if len(cells) == 0:
-        logge
+        logger.warning("No cells found to convert")
         return
 
     # Get driver for output format
-    driver = get_ve
-
+    driver = get_vector_driver_from_filename(output_file)
+    if driver is None:
         raise ValueError(f"Could not determine driver for {output_file}")
 
     # Remove existing file
-    if
-        driver.DeleteDataSource(outpu
+    if os.path.exists(output_file):
+        driver.DeleteDataSource(output_file)
 
-    # Create data sour
+    # Create data source
     data_source = driver.CreateDataSource(output_file)
- 
+    if data_source is None:
+        raise ValueError(f"Could not create output file: {output_file}")
 
-
-    # Create layer with WGS84 
+    # Create layer with WGS84
     srs = osr.SpatialReference()
-    srs
+    srs.ImportFromEPSG(4326)
 
-    layer = data_source.CreateLayer("mesh", srs, ogr.wkbPolygon
+    layer = data_source.CreateLayer("mesh", srs, ogr.wkbPolygon)
 
     # Add fields
-    layer.C
-    layer.CreateField(ogr.Fi
-    layer.CreateField(ogr.Fiel
-    layer.CreateField(ogr.Fi
+    layer.CreateField(ogr.FieldDefn("cellid", ogr.OFTInteger64))
+    layer.CreateField(ogr.FieldDefn("lon", ogr.OFTReal))
+    layer.CreateField(ogr.FieldDefn("lat", ogr.OFTReal))
+    layer.CreateField(ogr.FieldDefn("area", ogr.OFTReal))
+    layer.CreateField(ogr.FieldDefn("elevation", ogr.OFTReal))
 
     # Add features
-    for ce
-        feature = ogr.Feature(layer.GetLayerDefn
-        feature.SetFie
-     
-
-        feature.SetFie
+    for cell in cells:
+        feature = ogr.Feature(layer.GetLayerDefn())
+        feature.SetField("cellid", int(cell.lCellID))
+        feature.SetField("lon", float(cell.dLongitude_center_degree))
+        feature.SetField("lat", float(cell.dLatitude_center_degree))
+        feature.SetField("area", float(cell.dArea))
+        feature.SetField("elevation", float(cell.dElevation_mean))
 
         # Create polygon geometry
-    
-        for vertex
-            ring.AddPoint(vertex.dLongitude_degree, 
+        ring = ogr.Geometry(ogr.wkbLinearRing)
+        for vertex in cell.aVertex:
+            ring.AddPoint(vertex.dLongitude_degree, vertex.dLatitude_degree)
         # Close the ring
         if len(cell.aVertex) > 0:
-          
+            ring.AddPoint(
+                cell.aVertex[0].dLongitude_degree, cell.aVertex[0].dLatitude_degree
+            )
 
         poly = ogr.Geometry(ogr.wkbPolygon)
-        poly.AddGeometry(ri
-     
+        poly.AddGeometry(ring)
+        feature.SetGeometry(poly)
 
         layer.CreateFeature(feature)
-        feature
+        feature = None
 
     data_source = None
-
-    log
+    logger.info(f"Successfully converted {len(cells)} cells to {output_file}")
 
 
 def convert_to_zarr(
- 
-    output_path: str
-    mesh_type: str = 
-    **zarr_kwargs
-) 
-
-    Convert any GDAL-supp
+    input_file: str,
+    output_path: str,
+    mesh_type: str = "dggrid",
+    **zarr_kwargs: Any,
+) -> None:
+    """
+    Convert any GDAL-supported vector mesh file to Zarr format.
 
     Args:
-        input_file: Input mesh f
+        input_file: Input mesh file (GPKG, GeoJSON, Shapefile, etc.)
         output_path: Output Zarr store path
-    
-        **zarr_kwargs: Addit
-
-    Raises:
-        FileNotFoundErr
+        mesh_type: Type of mesh (dggrid, mpas, tin, etc.)
+        **zarr_kwargs: Additional arguments passed to convert_vector_to_zarr
     """
-    c
+    convert_vector_to_zarr(input_file, output_path, mesh_type=mesh_type, **zarr_kwargs)
 
 
 def convert_from_zarr(
-    
-
+    zarr_path: str,
+    output_file: str,
     cell_ids: Optional[List[int]] = None,
-
+    bbox: Optional[Tuple[float, float, float, float]] = None,
 ) -> None:
     """
-    Convert Zarr to any GDAL-supported vector forma
+    Convert Zarr to any GDAL-supported vector format.
 
-    The output format is automatically deter
+    The output format is automatically determined from the file extension.
 
     Args:
-        zarr_path
-
-        cell_ids: Optional list of cell IDs 
+        zarr_path: Input Zarr store path
+        output_file: Output file path (.gpkg, .geojson, .shp, etc.)
+        cell_ids: Optional list of cell IDs to export
         bbox: Optional bounding box (lon_min, lat_min, lon_max, lat_max)
-
-    Rais
-
     """
-    convert_zarr_to
+    convert_zarr_to_vector(zarr_path, output_file, cell_ids=cell_ids, bbox=bbox)

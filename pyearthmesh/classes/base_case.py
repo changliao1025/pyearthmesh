@@ -26,13 +26,21 @@ class BaseCase(ABC):
     @property
     def output_workspace(self) -> str:
         """Resolved output directory for this case."""
-        ws = getattr(self, "sWorkspace_output", None) or self.config.get("sWorkspace_output") or ""
+        ws = (
+            getattr(self, "sWorkspace_output", None)
+            or self.config.get("sWorkspace_output")
+            or ""
+        )
         return str(ws)
 
     @property
     def mesh_file(self) -> str:
         """Resolved path to the primary output mesh file."""
-        mf = getattr(self, "sFilename_mesh", None) or self.config.get("sFilename_mesh") or ""
+        mf = (
+            getattr(self, "sFilename_mesh", None)
+            or self.config.get("sFilename_mesh")
+            or ""
+        )
         return str(mf)
 
     @abstractmethod

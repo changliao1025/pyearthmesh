@@ -11,7 +11,10 @@ from pyearthmesh.config.workflows.healpix_workflow import HealpixCase, HealpixWo
 from pyearthmesh.config.workflows.isea_workflow import ISEACase, ISEAWorkflow
 from pyearthmesh.config.workflows.latlon_workflow import LatLonCase, LatLonWorkflow
 from pyearthmesh.config.workflows.mpas_workflow import MPASCase, MPASWorkflow
-from pyearthmesh.config.workflows.rhealpix_workflow import RHEALPixCase, RHEALPixWorkflow
+from pyearthmesh.config.workflows.rhealpix_workflow import (
+    RHEALPixCase,
+    RHEALPixWorkflow,
+)
 
 # Backward-compatible alias for the older module name.
 MPASWorkflowModuleAlias = MPASWorkflow

@@ -8,12 +8,14 @@ grid cell defined by longitude and latitude boundaries.
 
 import json
 from json import JSONEncoder
-from typing import List, Dict, Any, Optional, Union, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 from pyearth.gis.geometry.calculate_polygon_area import calculate_polygon_area
-from pyearthmesh.classes.vertex import pyvertex
+
 from pyearthmesh.classes.edge import pyedge
 from pyearthmesh.classes.meshcell import pymeshcell
+from pyearthmesh.classes.vertex import pyvertex
 
 
 class LatlonClassEncoder(JSONEncoder):
@@ -482,6 +484,7 @@ class pylatlon(pymeshcell):
         """
         if self.pBound is None:
             self.calculate_cell_bound()
+        assert self.pBound is not None
         return self.pBound
 
     def set_cell_id(self, lCellID: int) -> None:

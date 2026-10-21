@@ -42,8 +42,14 @@ class LatLonWorkflow(BaseWorkflow):
     @classmethod
     def default_config(cls) -> dict[str, Any]:
         return {
-            "workflow": {"date": None, "mesh_type": "latlon", "case_index": 1,
-                         "model": "latlon", "debug": False, "run_on_hpc": False},
+            "workflow": {
+                "date": None,
+                "mesh_type": "latlon",
+                "case_index": 1,
+                "model": "latlon",
+                "debug": False,
+                "run_on_hpc": False,
+            },
             "resolutions": {"degree": 1.0},
             "paths": {"output_workspace": "./output", "region_geometry": ""},
         }
@@ -72,8 +78,12 @@ class LatLonWorkflow(BaseWorkflow):
             raise ValueError("Lat-Lon resolution must be positive")
 
         bounds = region.get("bbox", {}) or {}
-        longitude_left = float(region.get("longitude_left") or bounds.get("left", -180.0))
-        longitude_right = float(region.get("longitude_right") or bounds.get("right", 180.0))
+        longitude_left = float(
+            region.get("longitude_left") or bounds.get("left", -180.0)
+        )
+        longitude_right = float(
+            region.get("longitude_right") or bounds.get("right", 180.0)
+        )
         latitude_bot = float(region.get("latitude_bot") or bounds.get("bottom", -90.0))
         latitude_top = float(region.get("latitude_top") or bounds.get("top", 90.0))
 

@@ -1,10 +1,16 @@
-import os, stat, platform
+import os
+import platform
+import stat
+import subprocess
 from pathlib import Path
+
+import netCDF4 as nc
 import numpy as np
 from osgeo import ogr, osr
-import subprocess
-import netCDF4 as nc
-from pyearth.gis.gdal.gdal_vector_format_support import get_vector_driver_from_filename #future support for multiple vector formats
+from pyearth.gis.gdal.gdal_vector_format_support import (  # future support for multiple vector formats
+    get_vector_driver_from_filename,
+)
+
 from pyearthmesh.utility.convert_coordinates import convert_gcs_coordinates_to_meshcell
 
 slash = os.sep
@@ -40,7 +46,7 @@ def generate_bash_script(sWorkspace_output, sFilename_mesh_in, sResolution_in):
     sCommand = "--alt --res " + sResolution_in + " --file " + sFilename_mesh_in
 
     os.chdir(sWorkspace_output)
-    # detemine the system platform
+    # determine the system platform
     # Determine the appropriate executable name for the platform
     system = platform.system()
     if platform.system() == "Windows":

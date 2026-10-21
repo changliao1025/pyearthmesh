@@ -1,6 +1,6 @@
 import numpy as np
-from osgeo import ogr
 from jigsawpy import jigsaw_msh_t
+from osgeo import ogr
 
 ogr.DontUseExceptions()
 
@@ -42,14 +42,14 @@ def linegeo(line, nset, eset, nobj, last):
 
         nobj = nobj + 1
 
-        indx = np.arange(0, npts - 1) + last
+        index = np.arange(0, npts - 1) + last
 
         last = last + npts
         line_dummy = np.array(line)
         temp.vert2["coord"] = line_dummy[:, 0:2]  # line[+0::]
 
-        temp.edge2["index"][:, 0] = indx + 0
-        temp.edge2["index"][:, 1] = indx + 1
+        temp.edge2["index"][:, 0] = index + 0
+        temp.edge2["index"][:, 1] = index + 1
 
         nset.append(temp.vert2)
         eset.append(temp.edge2)
@@ -76,15 +76,15 @@ def polygeo(loop, nset, eset, nobj, last):
 
         nobj = nobj + 1
 
-        indx = np.arange(0, npts - 1) + last
+        index = np.arange(0, npts - 1) + last
 
         itop = last + npts - 1
 
         idx1 = np.full(npts, itop, dtype=np.int32)
-        idx1[:-1] = indx + 0
+        idx1[:-1] = index + 0
 
         idx2 = np.full(npts, last, dtype=np.int32)
-        idx2[:-1] = indx + 1
+        idx2[:-1] = index + 1
 
         last = last + npts
 
@@ -129,9 +129,7 @@ def readgeo(geom, nset, eset, nobj, last):
     elif geom_type == ogr.wkbMultiLineString:
 
         for index in range(geom.GetGeometryCount()):
-            nobj, last = readgeo(
-                geom.GetGeometryRef(index), nset, eset, nobj, last
-            )
+            nobj, last = readgeo(geom.GetGeometryRef(index), nset, eset, nobj, last)
 
     elif geom_type == ogr.wkbPolygon:
 
@@ -142,16 +140,12 @@ def readgeo(geom, nset, eset, nobj, last):
     elif geom_type == ogr.wkbMultiPolygon:
 
         for index in range(geom.GetGeometryCount()):
-            nobj, last = readgeo(
-                geom.GetGeometryRef(index), nset, eset, nobj, last
-            )
+            nobj, last = readgeo(geom.GetGeometryRef(index), nset, eset, nobj, last)
 
     elif geom_type == ogr.wkbGeometryCollection:
 
         for index in range(geom.GetGeometryCount()):
-            nobj, last = readgeo(
-                geom.GetGeometryRef(index), nset, eset, nobj, last
-            )
+            nobj, last = readgeo(geom.GetGeometryRef(index), nset, eset, nobj, last)
 
     return nobj, last
 

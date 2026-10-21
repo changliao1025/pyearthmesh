@@ -7,13 +7,14 @@ hexagon-specific mesh cell functionality for flowline network modeling.
 
 import json
 from json import JSONEncoder
-from typing import List, Optional, Any, Tuple
+from typing import Any, List, Optional, Tuple
+
 import numpy as np
 from pyearth.gis.geometry.calculate_polygon_area import calculate_polygon_area
-from pyearthmesh.classes.vertex import pyvertex
-from pyearthmesh.classes.edge import pyedge
 
+from pyearthmesh.classes.edge import pyedge
 from pyearthmesh.classes.meshcell import pymeshcell
+from pyearthmesh.classes.vertex import pyvertex
 
 
 class HexagonClassEncoder(JSONEncoder):

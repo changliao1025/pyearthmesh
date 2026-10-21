@@ -39,9 +39,10 @@ def debug_idl(sFile_in, sFile_out, iFlag_drop_idl_crossing_cells):
         os.replace(sFilename_mesh_new, sFile_out)
         print(f"New mesh file moved to: {sFile_out}")
 
+
 if __name__ == "__main__":
-    sFile_in=r'D:\scratch\04model\pyearthmesh\healpix\50km\Parquet\01\healpix_mesh_base_01.parquet'
-    sFile_out=r'D:\scratch\04model\pyearthmesh\healpix\50km\Parquet\01\healpix_mesh_base_01_debug.parquet'
-    iFlag_drop_idl_crossing_cells=0
+    sFile_in = r"D:\scratch\04model\pyearthmesh\healpix\50km\Parquet\01\healpix_mesh_base_01.parquet"
+    sFile_out = r"D:\scratch\04model\pyearthmesh\healpix\50km\Parquet\01\healpix_mesh_base_01_debug.parquet"
+    iFlag_drop_idl_crossing_cells = 0
 
     debug_idl(sFile_in, sFile_out, iFlag_drop_idl_crossing_cells)

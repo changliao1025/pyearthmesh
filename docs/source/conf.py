@@ -39,10 +39,10 @@ def get_version():
 
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon",    # Support for Google and NumPy style docstrings
-    "sphinx.ext.viewcode",    # Add links to source code
+    "sphinx.ext.napoleon",  # Support for Google and NumPy style docstrings
+    "sphinx.ext.viewcode",  # Add links to source code
     "sphinx.ext.intersphinx",  # Link to other project documentation
-    "myst_parser",            # Markdown support (.md)
+    "myst_parser",  # Markdown support (.md)
 ]
 
 # Intersphinx mapping to link to other projects

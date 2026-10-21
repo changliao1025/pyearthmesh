@@ -1,18 +1,18 @@
-import subprocess
 import os
+import subprocess
 import time
 
 import numpy as np
 import xarray as xr
-from pyearth.system.python.get_python_environment import get_python_environment
-from pyearthmesh.utility.mpas_tools.mpasmsh import (
-    jigsaw_mesh_to_netcdf,
-    inject_edge_tags,
-)
-
-from mpas_tools.mesh.conversion import convert
-from mpas_tools.io import write_netcdf
 from jigsawpy import savevtk
+from mpas_tools.io import write_netcdf
+from mpas_tools.mesh.conversion import convert
+from pyearth.system.python.get_python_environment import get_python_environment
+
+from pyearthmesh.utility.mpas_tools.mpasmsh import (
+    inject_edge_tags,
+    jigsaw_mesh_to_netcdf,
+)
 
 
 def savetin(sWorkspace_jigsaw_out, geom, mesh):

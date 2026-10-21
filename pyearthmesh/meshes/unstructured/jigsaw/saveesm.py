@@ -1,22 +1,23 @@
-import subprocess
 import os
 import shutil
+import subprocess
 import time
+
+import mpas_tools
 import numpy as np
 import xarray as xr
 from geometric_features import GeometricFeatures
-from pyearth.system.python.get_python_environment import get_python_environment
-from pyearthmesh.utility.mpas_tools.mpasmsh import (
-    jigsaw_mesh_to_netcdf,
-    inject_edge_tags,
-    subtract_critical_passages,
-    mask_reachable_ocean,
-)
-
-import mpas_tools
-from mpas_tools.mesh.conversion import convert, cull
-from mpas_tools.logging import check_call
 from mpas_tools.io import write_netcdf
+from mpas_tools.logging import check_call
+from mpas_tools.mesh.conversion import convert, cull
+from pyearth.system.python.get_python_environment import get_python_environment
+
+from pyearthmesh.utility.mpas_tools.mpasmsh import (
+    inject_edge_tags,
+    jigsaw_mesh_to_netcdf,
+    mask_reachable_ocean,
+    subtract_critical_passages,
+)
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 

@@ -152,9 +152,7 @@ def test_compile_workflow_latlon_produces_structured_native_config():
     config = compile_workflow(
         {
             "mesh_type": "latlon",
-            "region": {
-                "bbox": {"left": -10, "right": 10, "bottom": 20, "top": 30}
-            },
+            "region": {"bbox": {"left": -10, "right": 10, "bottom": 20, "top": 30}},
             "resolution": {"degree": 0.5},
             "paths": {"output_workspace": "./output"},
         }
@@ -210,7 +208,9 @@ def test_compile_workflow_isea_produces_native_config():
 def test_isea_workflow_builds_runtime_adapter(monkeypatch, tmp_path):
     captured = {}
 
-    def fake_create_isea_mesh(dResolution_meter_in, sISEA_type, sFilename_mesh, sWorkspace_output, **kwargs):
+    def fake_create_isea_mesh(
+        dResolution_meter_in, sISEA_type, sFilename_mesh, sWorkspace_output, **kwargs
+    ):
         captured["resolution"] = dResolution_meter_in
         captured["isea_type"] = sISEA_type
         captured["filename"] = sFilename_mesh
@@ -220,6 +220,7 @@ def test_isea_workflow_builds_runtime_adapter(monkeypatch, tmp_path):
 
     import sys
     from unittest.mock import MagicMock
+
     if "dggal" not in sys.modules:
         monkeypatch.setitem(sys.modules, "dggal", MagicMock())
 
@@ -233,7 +234,10 @@ def test_isea_workflow_builds_runtime_adapter(monkeypatch, tmp_path):
         {
             "workflow": {"mesh_type": "isea"},
             "resolutions": {"meter": 5000.0},
-            "paths": {"output_workspace": out_dir, "output_mesh": "isea3h_mesh.geojson"},
+            "paths": {
+                "output_workspace": out_dir,
+                "output_mesh": "isea3h_mesh.geojson",
+            },
             "features": {"isea_type": "ISEA3H"},
         }
     )
@@ -277,7 +281,9 @@ def test_compile_workflow_rhealpix_produces_native_config():
 def test_rhealpix_workflow_builds_runtime_adapter(monkeypatch, tmp_path):
     captured = {}
 
-    def fake_create_rhealpix_mesh(dResolution_meter_in, sFilename_mesh, sWorkspace_output, **kwargs):
+    def fake_create_rhealpix_mesh(
+        dResolution_meter_in, sFilename_mesh, sWorkspace_output, **kwargs
+    ):
         captured["resolution"] = dResolution_meter_in
         captured["filename"] = sFilename_mesh
         captured["workspace"] = sWorkspace_output
@@ -286,6 +292,7 @@ def test_rhealpix_workflow_builds_runtime_adapter(monkeypatch, tmp_path):
 
     import sys
     from unittest.mock import MagicMock
+
     if "dggal" not in sys.modules:
         monkeypatch.setitem(sys.modules, "dggal", MagicMock())
 
@@ -299,7 +306,10 @@ def test_rhealpix_workflow_builds_runtime_adapter(monkeypatch, tmp_path):
         {
             "workflow": {"mesh_type": "rhealpix"},
             "resolutions": {"meter": 10000.0},
-            "paths": {"output_workspace": out_dir, "output_mesh": "rhealpix_mesh.geojson"},
+            "paths": {
+                "output_workspace": out_dir,
+                "output_mesh": "rhealpix_mesh.geojson",
+            },
             "features": {"use_tiles": True, "tile_mode": "base"},
         }
     )
@@ -314,16 +324,16 @@ def test_rhealpix_workflow_builds_runtime_adapter(monkeypatch, tmp_path):
     assert captured["kwargs"]["tile_mode"] == "base"
 
 
-
-
-
 def test_workflow_property_accessors(tmp_path):
     out_dir = str(tmp_path / "output")
     workflow = create_workflow(
         {
             "workflow": {"mesh_type": "healpix"},
             "resolutions": {"meter": 50000.0},
-            "paths": {"output_workspace": out_dir, "output_mesh": "custom_mesh.geojson"},
+            "paths": {
+                "output_workspace": out_dir,
+                "output_mesh": "custom_mesh.geojson",
+            },
         }
     )
 
@@ -386,7 +396,9 @@ def test_workflow_package_exports():
         "RHEALPixWorkflow",
     ]
     for name in expected_exports:
-        assert hasattr(wf, name), f"pyearthmesh.config.workflows is missing export: {name}"
+        assert hasattr(
+            wf, name
+        ), f"pyearthmesh.config.workflows is missing export: {name}"
 
 
 def test_case_hierarchy_and_api_uniformity():
@@ -408,30 +420,65 @@ def test_case_hierarchy_and_api_uniformity():
     required_properties = ["output_workspace", "mesh_file", "config"]
 
     for case_cls in cases:
-        assert issubclass(case_cls, BaseCase), f"{case_cls.__name__} must inherit from BaseCase"
+        assert issubclass(
+            case_cls, BaseCase
+        ), f"{case_cls.__name__} must inherit from BaseCase"
         for method in required_methods:
             assert hasattr(case_cls, method) and callable(
                 getattr(case_cls, method)
             ), f"{case_cls.__name__} missing callable {method}"
         for prop in required_properties:
-            assert hasattr(case_cls, prop), f"{case_cls.__name__} missing property {prop}"
+            assert hasattr(
+                case_cls, prop
+            ), f"{case_cls.__name__} missing property {prop}"
 
 
 def test_workflows_case_adapter_consistency(tmp_path):
     import os
+
     from pyearthmesh.config.workflows import BaseCase
 
     out_dir = str(tmp_path / "test_out")
     test_specs = [
-        ("healpix", {"workflow": {"mesh_type": "healpix"}, "resolutions": {"meter": 1000.0}, "paths": {"output_workspace": out_dir}}),
-        ("latlon", {"workflow": {"mesh_type": "latlon"}, "resolutions": {"degree": 1.0}, "paths": {"output_workspace": out_dir}}),
-        ("isea", {"workflow": {"mesh_type": "isea"}, "resolutions": {"meter": 1000.0}, "paths": {"output_workspace": out_dir}}),
-        ("rhealpix", {"workflow": {"mesh_type": "rhealpix"}, "resolutions": {"meter": 1000.0}, "paths": {"output_workspace": out_dir}}),
+        (
+            "healpix",
+            {
+                "workflow": {"mesh_type": "healpix"},
+                "resolutions": {"meter": 1000.0},
+                "paths": {"output_workspace": out_dir},
+            },
+        ),
+        (
+            "latlon",
+            {
+                "workflow": {"mesh_type": "latlon"},
+                "resolutions": {"degree": 1.0},
+                "paths": {"output_workspace": out_dir},
+            },
+        ),
+        (
+            "isea",
+            {
+                "workflow": {"mesh_type": "isea"},
+                "resolutions": {"meter": 1000.0},
+                "paths": {"output_workspace": out_dir},
+            },
+        ),
+        (
+            "rhealpix",
+            {
+                "workflow": {"mesh_type": "rhealpix"},
+                "resolutions": {"meter": 1000.0},
+                "paths": {"output_workspace": out_dir},
+            },
+        ),
     ]
 
     for mesh_type, config in test_specs:
         wf = create_workflow(config)
-        assert isinstance(wf.case, BaseCase), f"{mesh_type} workflow case is not a BaseCase"
+        assert isinstance(
+            wf.case, BaseCase
+        ), f"{mesh_type} workflow case is not a BaseCase"
         assert wf.output_workspace == os.path.abspath(out_dir)
         assert wf.case.output_workspace == os.path.abspath(out_dir)
         assert isinstance(wf.mesh_file, str)
@@ -446,6 +493,7 @@ def test_workflows_case_adapter_consistency(tmp_path):
 
 def test_mpas_case_hpc_job_preserves_cwd(tmp_path):
     import os
+
     from pyearthmesh.config.workflows import MPASCase
 
     out_dir = str(tmp_path / "mpas_out")
@@ -472,7 +520,6 @@ def test_mpas_case_hpc_job_preserves_cwd(tmp_path):
 
     # Backward compatibility alias
     case._mpas_create_hpc_job(sSlurm_in="slurm", hours_in=5)
-    assert os.getcwd() == initial_cwd, "_mpas_create_hpc_job must not mutate os.getcwd()"
-
-
-
+    assert (
+        os.getcwd() == initial_cwd
+    ), "_mpas_create_hpc_job must not mutate os.getcwd()"

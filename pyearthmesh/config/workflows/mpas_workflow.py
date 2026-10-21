@@ -24,17 +24,38 @@ class MPASWorkflow(BaseWorkflow):
     def default_config(cls) -> dict[str, Any]:
         """MPAS-flavoured defaults for the sectioned workflow config."""
         return {
-            "workflow": {"date": None, "mesh_type": "mpas", "case_index": 1,
-                         "model": "jigsaw", "simplify_hydrosheds_river_network": False,
-                         "process_coastline": False, "debug": True, "largest_outlets": 10,
-                         "run_on_hpc": False},
-            "resolutions": {"ocean_km": 100, "land_km": 12.5, "river_network_km": 5,
-                            "coastline_km": 10, "lake_boundary_km": 3,
-                            "watershed_boundary_km": 3},
-            "paths": {"input_workspace": "", "output_workspace": "./output",
-                      "hydrosheds_rivers": "", "region_geometry": "", "dam_vector": ""},
-            "jigsaw": {"standalone": True, "create_directory": True, "hours": 5,
-                       "slurm": "slurm"},
+            "workflow": {
+                "date": None,
+                "mesh_type": "mpas",
+                "case_index": 1,
+                "model": "jigsaw",
+                "simplify_hydrosheds_river_network": False,
+                "process_coastline": False,
+                "debug": True,
+                "largest_outlets": 10,
+                "run_on_hpc": False,
+            },
+            "resolutions": {
+                "ocean_km": 100,
+                "land_km": 12.5,
+                "river_network_km": 5,
+                "coastline_km": 10,
+                "lake_boundary_km": 3,
+                "watershed_boundary_km": 3,
+            },
+            "paths": {
+                "input_workspace": "",
+                "output_workspace": "./output",
+                "hydrosheds_rivers": "",
+                "region_geometry": "",
+                "dam_vector": "",
+            },
+            "jigsaw": {
+                "standalone": True,
+                "create_directory": True,
+                "hours": 5,
+                "slurm": "slurm",
+            },
         }
 
     @classmethod
@@ -70,7 +91,9 @@ class MPASWorkflow(BaseWorkflow):
         config["iFlag_geom_coastline"] = coastline
         config["iFlag_spac_coastline"] = coastline
 
-        output_workspace = paths.get("output_workspace") or paths.get("sWorkspace_output")
+        output_workspace = paths.get("output_workspace") or paths.get(
+            "sWorkspace_output"
+        )
         if output_workspace is not None:
             config["sWorkspace_output"] = output_workspace
 
@@ -80,7 +103,9 @@ class MPASWorkflow(BaseWorkflow):
         config["iFlag_global"] = 0 if boundary_wkt else 1
 
         # Resolution mapping (all JIGSAW / MPAS resolutions are in kilometres)
-        def _get_res(key_km: str, key_native: str, default: float | None = None) -> float | None:
+        def _get_res(
+            key_km: str, key_native: str, default: float | None = None
+        ) -> float | None:
             val = resolution.get(key_km)
             if val is None:
                 val = resolution.get(key_native)
@@ -104,7 +129,9 @@ class MPASWorkflow(BaseWorkflow):
         lake_res = _get_res("lake_boundary_km", "dResolution_lake_boundary", 4.0)
         config["dResolution_lake_boundary"] = lake_res
 
-        wshed_res = _get_res("watershed_boundary_km", "dResolution_watershed_boundary", 4.0)
+        wshed_res = _get_res(
+            "watershed_boundary_km", "dResolution_watershed_boundary", 4.0
+        )
         config["dResolution_watershed_boundary"] = wshed_res
 
         dam_res = _get_res("dam_km", "dResolution_dam", None)
@@ -143,7 +170,9 @@ class MPASWorkflow(BaseWorkflow):
             if key not in excluded_keys:
                 config[key] = value
 
-        river_vector = paths.get("hydrosheds_rivers") or features.get("hydrosheds_rivers")
+        river_vector = paths.get("hydrosheds_rivers") or features.get(
+            "hydrosheds_rivers"
+        )
         if river_vector:
             config["sFilename_river_network_vector"] = river_vector
             config["iFlag_geom_river_network"] = True

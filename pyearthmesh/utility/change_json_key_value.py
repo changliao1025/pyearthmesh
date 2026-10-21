@@ -1,11 +1,11 @@
 import json
-from pathlib import Path
 import shutil
 import tempfile
+from pathlib import Path
+
 
 def change_json_key_value(
-    sFilename_json_in, sKey, new_value,
-    iFlag_basin_in=None, iBasin_index_in=None
+    sFilename_json_in, sKey, new_value, iFlag_basin_in=None, iBasin_index_in=None
 ):
     """
     Change the value associated with the specified key in a JSON file safely.
@@ -24,7 +24,7 @@ def change_json_key_value(
         new_value = str(new_value)
 
     # Read the original JSON data
-    with open(sFilename_json_in, "r") as file:
+    with open(sFilename_json_in) as file:
         data = json.load(file)
 
     # Update the value associated with the specified key
@@ -61,7 +61,7 @@ def change_json_keys_values(sFilename_json_in, key_value_pairs, iFlag_basin_in=N
     sFilename_json_in = str(sFilename_json_in)
 
     # Read the original JSON data
-    with open(sFilename_json_in, "r") as file:
+    with open(sFilename_json_in) as file:
         data = json.load(file)
 
     # Update all specified key-value pairs

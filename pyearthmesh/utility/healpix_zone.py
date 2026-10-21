@@ -9,6 +9,7 @@ Notes
 - Hierarchical labels are only supported for NESTED ordering (because RING
   ordering does not preserve simple parent/child integer relationships).
 """
+
 import math
 from typing import List
 
@@ -48,7 +49,7 @@ def generate_healpix_zone_name(
     if not _is_power_of_two(nside):
         raise ValueError("nside must be a power of two")
 
-    npix = 12 * (nside ** 2)
+    npix = 12 * (nside**2)
     if not (0 <= pix < npix):
         raise ValueError(f"pix must be in [0, {npix})")
 
@@ -65,7 +66,7 @@ def generate_healpix_zone_name(
         # Number of subdivision levels relative to nside=1
         levels = int(math.log2(nside)) if nside > 1 else 0
         # Top-level face index at nside=1
-        face = pix // (4 ** levels) if levels > 0 else pix
+        face = pix // (4**levels) if levels > 0 else pix
         children: List[int] = []
         for j in range(levels, 0, -1):
             child = (pix // (4 ** (j - 1))) % 4

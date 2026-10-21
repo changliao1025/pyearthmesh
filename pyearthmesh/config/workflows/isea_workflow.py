@@ -48,7 +48,9 @@ class ISEACase(BaseCase):
                 self.config["sWorkspace_output"],
                 Path(self.config["sFilename_mesh"]).stem + ".parquet",
             )
-            convert_vector_format(sFilename_mesh_full, sFilename_parquet, use_ogr2ogr=True)
+            convert_vector_format(
+                sFilename_mesh_full, sFilename_parquet, use_ogr2ogr=True
+            )
             if self.config.get("check_mesh_quality"):
                 from pyearthmesh.utility.mesh_utility import check_mesh_quality
 
@@ -134,7 +136,9 @@ class ISEAWorkflow(BaseWorkflow):
         config["nTile"] = features.get("nTile")
         config["zone_level"] = features.get("zone_level")
         config["tiles_per_base"] = features.get("tiles_per_base")
-        config["iFlag_netcdf"] = int(str(config["sFilename_mesh"]).lower().endswith(".nc"))
+        config["iFlag_netcdf"] = int(
+            str(config["sFilename_mesh"]).lower().endswith(".nc")
+        )
         config["convert_to_parquet"] = bool(features.get("convert_to_parquet", False))
         config["check_mesh_quality"] = bool(features.get("check_mesh_quality", False))
         return config

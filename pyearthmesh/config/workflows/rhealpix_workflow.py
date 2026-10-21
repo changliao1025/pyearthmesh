@@ -60,7 +60,9 @@ class RHEALPixCase(BaseCase):
                     self.config["sWorkspace_output"],
                     Path(self.config["sFilename_mesh"]).stem + ".parquet",
                 )
-                convert_vector_format(sFilename_mesh_full, sFilename_parquet, use_ogr2ogr=True)
+                convert_vector_format(
+                    sFilename_mesh_full, sFilename_parquet, use_ogr2ogr=True
+                )
 
         return result
 
@@ -127,7 +129,9 @@ class RHEALPixWorkflow(BaseWorkflow):
         config["nTile"] = features.get("nTile")
         config["zone_level"] = features.get("zone_level")
         config["tiles_per_base"] = features.get("tiles_per_base")
-        config["iFlag_netcdf"] = int(str(config["sFilename_mesh"]).lower().endswith(".nc"))
+        config["iFlag_netcdf"] = int(
+            str(config["sFilename_mesh"]).lower().endswith(".nc")
+        )
         config["convert_to_parquet"] = bool(features.get("convert_to_parquet", False))
         return config
 
@@ -146,4 +150,3 @@ class RHEALPixWorkflow(BaseWorkflow):
 
 
 __all__ = ["RHEALPixCase", "RHEALPixWorkflow"]
-

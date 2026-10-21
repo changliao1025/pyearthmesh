@@ -1,8 +1,8 @@
-import os
 import json
+import os
 import warnings
-from pathlib import Path
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 
 class BaseMeshConfig(ABC):
@@ -20,7 +20,8 @@ class BaseMeshConfig(ABC):
 
     def get_mesh_type(self):
         """Returns the mesh type identifier"""
-        return self.__class__.__name__.replace('Config', '').lower()
+        return self.__class__.__name__.replace("Config", "").lower()
+
 
 class JigsawConfig(BaseMeshConfig):
     """Configuration manager for JIGSAW mesh generation"""
@@ -150,8 +151,8 @@ class MPASConfig(BaseMeshConfig):
             "iFlag_antarctic": 0,  # Antarctic region flag (1 = Antarctic domain)
             "iFlag_arctic": 0,  # Arctic region flag (1 = Arctic domain)
             # Domain extent (used when iFlag_antarctic==0 and iFlag_arctic==0)
-            "dLatitude_top": 90.0,    # Top (north) boundary latitude in degrees
-            "dLatitude_bot": -90.0,   # Bottom (south) boundary latitude in degrees
+            "dLatitude_top": 90.0,  # Top (north) boundary latitude in degrees
+            "dLatitude_bot": -90.0,  # Bottom (south) boundary latitude in degrees
             "dLongitude_left": -180.0,  # Left (west) boundary longitude in degrees
             "dLongitude_right": 180.0,  # Right (east) boundary longitude in degrees
             "mesh_type": "mpas",  # Mesh type identifier
@@ -186,16 +187,16 @@ class HealpixConfig(BaseMeshConfig):
             # Output file
             "sFilename_mesh": "healpix_mesh.geojson",  # Output mesh filename
             # Tiling options
-            "iFlag_netcdf": 0,       # 0 = vector format, 1 = NetCDF
-            "iFlag_use_tiles": 0,    # 0 = single file, 1 = tiled output
-            "nTile": None,           # Number of tiles (None = auto)
-            "tile_mode": "simple",   # 'simple', 'base', 'hierarchical', 'zone'
-            "zone_level": None,      # Zone level for zone-based tiling
+            "iFlag_netcdf": 0,  # 0 = vector format, 1 = NetCDF
+            "iFlag_use_tiles": 0,  # 0 = single file, 1 = tiled output
+            "nTile": None,  # Number of tiles (None = auto)
+            "tile_mode": "simple",  # 'simple', 'base', 'hierarchical', 'zone'
+            "zone_level": None,  # Zone level for zone-based tiling
             "tiles_per_base": None,  # Tiles per base pixel (hierarchical mode)
             # Boundary
-            "pBoundary_wkt": None,   # Boundary polygon in WKT (None = global)
+            "pBoundary_wkt": None,  # Boundary polygon in WKT (None = global)
             # Common flags
-            "iFlag_global": 1,       # Global mesh flag
+            "iFlag_global": 1,  # Global mesh flag
             "mesh_type": "healpix",  # Mesh type identifier
         }
 
@@ -227,17 +228,17 @@ class ISEAConfig(BaseMeshConfig):
             # Output file
             "sFilename_mesh": "isea_mesh.geojson",  # Output mesh filename
             # Tiling options
-            "iFlag_netcdf": 0,       # 0 = vector format, 1 = NetCDF
-            "iFlag_use_tiles": 0,    # 0 = single file, 1 = tiled output
-            "nTile": None,           # Number of tiles (None = auto)
-            "tile_mode": "simple",   # 'simple', 'base', 'hierarchical', 'zone'
-            "zone_level": None,      # Zone level for zone-based tiling
+            "iFlag_netcdf": 0,  # 0 = vector format, 1 = NetCDF
+            "iFlag_use_tiles": 0,  # 0 = single file, 1 = tiled output
+            "nTile": None,  # Number of tiles (None = auto)
+            "tile_mode": "simple",  # 'simple', 'base', 'hierarchical', 'zone'
+            "zone_level": None,  # Zone level for zone-based tiling
             "tiles_per_base": None,  # Tiles per base triangle (hierarchical mode)
             # Boundary
-            "pBoundary_wkt": None,   # Boundary polygon in WKT (None = global)
+            "pBoundary_wkt": None,  # Boundary polygon in WKT (None = global)
             # Common flags
-            "iFlag_global": 1,       # Global mesh flag
-            "mesh_type": "isea",     # Mesh type identifier
+            "iFlag_global": 1,  # Global mesh flag
+            "mesh_type": "isea",  # Mesh type identifier
         }
 
     def validate_config(self, config):
@@ -262,23 +263,23 @@ class LatLonConfig(BaseMeshConfig):
         """Returns a dictionary with default Lat-Lon configuration values"""
         return {
             # Grid resolution
-            "dResolution_degree": 1.0,   # Cell resolution in degrees
+            "dResolution_degree": 1.0,  # Cell resolution in degrees
             # Domain extent
-            "dLongitude_left": -180.0,   # Left boundary longitude
-            "dLongitude_right": 180.0,   # Right boundary longitude
-            "dLatitude_bot": -90.0,      # Bottom boundary latitude
-            "dLatitude_top": 90.0,       # Top boundary latitude
+            "dLongitude_left": -180.0,  # Left boundary longitude
+            "dLongitude_right": 180.0,  # Right boundary longitude
+            "dLatitude_bot": -90.0,  # Bottom boundary latitude
+            "dLatitude_top": 90.0,  # Top boundary latitude
             # Derived grid dimensions (computed from extent / resolution)
-            "ncolumn": 360,              # Number of columns
-            "nrow": 180,                 # Number of rows
+            "ncolumn": 360,  # Number of columns
+            "nrow": 180,  # Number of rows
             # Output file and workspace
             "sFilename_mesh": "latlon_mesh.geojson",  # Output mesh filename
-            "sWorkspace_output": "./output",          # Output directory
+            "sWorkspace_output": "./output",  # Output directory
             # Boundary
-            "pBoundary_wkt": None,       # Boundary polygon in WKT (None = auto bbox)
+            "pBoundary_wkt": None,  # Boundary polygon in WKT (None = auto bbox)
             # Common flags
-            "iFlag_global": 1,           # Global mesh flag
-            "mesh_type": "latlon",       # Mesh type identifier
+            "iFlag_global": 1,  # Global mesh flag
+            "mesh_type": "latlon",  # Mesh type identifier
         }
 
     def validate_config(self, config):
@@ -305,22 +306,22 @@ class SquareConfig(BaseMeshConfig):
         """Returns a dictionary with default Square mesh configuration values"""
         return {
             # Grid origin (projected coordinates, metres)
-            "dX_left": -180.0,           # Left boundary X coordinate (degrees or metres)
-            "dY_bot": -90.0,             # Bottom boundary Y coordinate (degrees or metres)
+            "dX_left": -180.0,  # Left boundary X coordinate (degrees or metres)
+            "dY_bot": -90.0,  # Bottom boundary Y coordinate (degrees or metres)
             # Cell resolution
             "dResolution_meter": 100000.0,  # Cell size in metres
             # Grid dimensions
-            "ncolumn": 360,              # Number of columns
-            "nrow": 180,                 # Number of rows
+            "ncolumn": 360,  # Number of columns
+            "nrow": 180,  # Number of rows
             # Output file
             "sFilename_mesh": "square_mesh.geojson",  # Output mesh filename
             # Projection reference (WKT string or EPSG code)
             "pProjection_reference": None,  # Projection WKT (None = WGS84)
             # Boundary
-            "pBoundary_wkt": None,       # Boundary polygon in WKT (None = bounding box)
+            "pBoundary_wkt": None,  # Boundary polygon in WKT (None = bounding box)
             # Common flags
-            "iFlag_global": 1,           # Global mesh flag
-            "mesh_type": "square",       # Mesh type identifier
+            "iFlag_global": 1,  # Global mesh flag
+            "mesh_type": "square",  # Mesh type identifier
         }
 
     def validate_config(self, config):
@@ -332,10 +333,14 @@ class SquareConfig(BaseMeshConfig):
                 )
         if "ncolumn" in config and config["ncolumn"] is not None:
             if config["ncolumn"] <= 0:
-                raise ValueError(f"ncolumn must be a positive integer, got {config['ncolumn']}")
+                raise ValueError(
+                    f"ncolumn must be a positive integer, got {config['ncolumn']}"
+                )
         if "nrow" in config and config["nrow"] is not None:
             if config["nrow"] <= 0:
-                raise ValueError(f"nrow must be a positive integer, got {config['nrow']}")
+                raise ValueError(
+                    f"nrow must be a positive integer, got {config['nrow']}"
+                )
         return True
 
 
@@ -350,24 +355,24 @@ class HexagonConfig(BaseMeshConfig):
         """Returns a dictionary with default Hexagon mesh configuration values"""
         return {
             # Rotation flag: 0 = flat-top, 1 = pointy-top
-            "iFlag_rotation": 0,         # Hexagon orientation flag
+            "iFlag_rotation": 0,  # Hexagon orientation flag
             # Grid origin (projected coordinates, metres)
-            "dX_left": -180.0,           # Left boundary X coordinate (degrees or metres)
-            "dY_bot": -90.0,             # Bottom boundary Y coordinate (degrees or metres)
+            "dX_left": -180.0,  # Left boundary X coordinate (degrees or metres)
+            "dY_bot": -90.0,  # Bottom boundary Y coordinate (degrees or metres)
             # Cell resolution
             "dResolution_meter": 100000.0,  # Cell size in metres (inscribed circle radius)
             # Grid dimensions
-            "ncolumn": 360,              # Number of columns
-            "nrow": 180,                 # Number of rows
+            "ncolumn": 360,  # Number of columns
+            "nrow": 180,  # Number of rows
             # Output file
             "sFilename_mesh": "hexagon_mesh.geojson",  # Output mesh filename
             # Projection reference (WKT string or EPSG code)
             "pProjection_reference": None,  # Projection WKT (None = WGS84)
             # Boundary
-            "pBoundary_wkt": None,       # Boundary polygon in WKT (None = bounding box)
+            "pBoundary_wkt": None,  # Boundary polygon in WKT (None = bounding box)
             # Common flags
-            "iFlag_global": 1,           # Global mesh flag
-            "mesh_type": "hexagon",      # Mesh type identifier
+            "iFlag_global": 1,  # Global mesh flag
+            "mesh_type": "hexagon",  # Mesh type identifier
         }
 
     def validate_config(self, config):
@@ -397,22 +402,22 @@ class TriangularConfig(BaseMeshConfig):
         """Returns a dictionary with default Triangular mesh configuration values"""
         return {
             # Grid origin (projected coordinates, metres)
-            "dX_left": -180.0,           # Left boundary X coordinate (degrees or metres)
-            "dY_bot": -90.0,             # Bottom boundary Y coordinate (degrees or metres)
+            "dX_left": -180.0,  # Left boundary X coordinate (degrees or metres)
+            "dY_bot": -90.0,  # Bottom boundary Y coordinate (degrees or metres)
             # Cell resolution
             "dResolution_meter": 100000.0,  # Cell size in metres (equivalent area)
             # Grid dimensions
-            "ncolumn": 360,              # Number of columns
-            "nrow": 180,                 # Number of rows
+            "ncolumn": 360,  # Number of columns
+            "nrow": 180,  # Number of rows
             # Output file
             "sFilename_mesh": "triangular_mesh.geojson",  # Output mesh filename
             # Projection reference (WKT string or EPSG code)
             "pProjection_reference": None,  # Projection WKT (None = WGS84)
             # Boundary
-            "pBoundary_wkt": None,       # Boundary polygon in WKT (None = bounding box)
+            "pBoundary_wkt": None,  # Boundary polygon in WKT (None = bounding box)
             # Common flags
-            "iFlag_global": 1,           # Global mesh flag
-            "mesh_type": "triangular",   # Mesh type identifier
+            "iFlag_global": 1,  # Global mesh flag
+            "mesh_type": "triangular",  # Mesh type identifier
         }
 
     def validate_config(self, config):
@@ -424,10 +429,14 @@ class TriangularConfig(BaseMeshConfig):
                 )
         if "ncolumn" in config and config["ncolumn"] is not None:
             if config["ncolumn"] <= 0:
-                raise ValueError(f"ncolumn must be a positive integer, got {config['ncolumn']}")
+                raise ValueError(
+                    f"ncolumn must be a positive integer, got {config['ncolumn']}"
+                )
         if "nrow" in config and config["nrow"] is not None:
             if config["nrow"] <= 0:
-                raise ValueError(f"nrow must be a positive integer, got {config['nrow']}")
+                raise ValueError(
+                    f"nrow must be a positive integer, got {config['nrow']}"
+                )
         return True
 
 
@@ -446,12 +455,12 @@ class CubicSphereConfig(BaseMeshConfig):
             # Output file
             "sFilename_mesh": "cubicsphere_mesh.geojson",  # Output mesh filename
             # Workspace for intermediate files (GenerateCSMesh output)
-            "sWorkspace_output": None,   # Working directory for mesh generation
+            "sWorkspace_output": None,  # Working directory for mesh generation
             # Boundary
-            "pBoundary_wkt": None,       # Boundary polygon in WKT (None = global)
+            "pBoundary_wkt": None,  # Boundary polygon in WKT (None = global)
             # Common flags
-            "iFlag_global": 1,           # Global mesh flag
-            "iFlag_save_mesh": 1,        # Save mesh to file flag
+            "iFlag_global": 1,  # Global mesh flag
+            "iFlag_save_mesh": 1,  # Save mesh to file flag
             "mesh_type": "cubicsphere",  # Mesh type identifier
         }
 
@@ -477,14 +486,14 @@ class TINConfig(BaseMeshConfig):
         tin_defaults = {
             # TIN-specific parameters
             "sFilename_jigsaw_mesh_netcdf": None,  # JIGSAW mesh NetCDF file
-            "pBoundary_wkt": None,                 # Boundary in WKT format
-            "iFlag_run_jigsaw": 1,                 # Flag to run JIGSAW for mesh generation
-            "iFlag_antarctic": 0,                  # Include Antarctic region
-            "iFlag_arctic": 0,                     # Include Arctic region
+            "pBoundary_wkt": None,  # Boundary in WKT format
+            "iFlag_run_jigsaw": 1,  # Flag to run JIGSAW for mesh generation
+            "iFlag_antarctic": 0,  # Include Antarctic region
+            "iFlag_arctic": 0,  # Include Arctic region
             # Common mesh parameters
-            "iFlag_global": 1,                     # Global mesh flag
-            "iFlag_save_mesh": 1,                  # Save mesh flag
-            "mesh_type": "tin",                    # Mesh type identifier
+            "iFlag_global": 1,  # Global mesh flag
+            "iFlag_save_mesh": 1,  # Save mesh flag
+            "mesh_type": "tin",  # Mesh type identifier
         }
         if include_jigsaw:
             jigsaw_defaults = JigsawConfig().get_default_config()
@@ -510,24 +519,24 @@ class DGGRIDConfig(BaseMeshConfig):
         """Returns a dictionary with default DGGRID mesh configuration values"""
         return {
             # DGGRID grid type: 'ISEA3H' (aperture 3) or 'ISEA4H' (aperture 4)
-            "sDggrid_type": "ISEA3H",    # DGGRID grid type identifier
+            "sDggrid_type": "ISEA3H",  # DGGRID grid type identifier
             # Resolution index (integer level; higher = finer)
-            "iResolution_index": 9,      # Resolution level index
+            "iResolution_index": 9,  # Resolution level index
             # Maximum cells per output file (None = single file)
             "lMax_cells_per_output_file": None,
             # Output file
             "sFilename_mesh": "dggrid_mesh.geojson",  # Output mesh filename
             # Workspace for intermediate DGGRID files
-            "sWorkspace_output": None,   # Working directory for mesh generation
+            "sWorkspace_output": None,  # Working directory for mesh generation
             # Optional boundary shapefile (None = global)
             "sFilename_boundary": None,  # Boundary shapefile path
             # Region flags
-            "iFlag_antarctic": 0,        # Include Antarctic region
-            "iFlag_arctic": 0,           # Include Arctic region
+            "iFlag_antarctic": 0,  # Include Antarctic region
+            "iFlag_arctic": 0,  # Include Arctic region
             # Common flags
-            "iFlag_global": 1,           # Global mesh flag
-            "iFlag_save_mesh": 1,        # Save mesh to file flag
-            "mesh_type": "dggrid",       # Mesh type identifier
+            "iFlag_global": 1,  # Global mesh flag
+            "iFlag_save_mesh": 1,  # Save mesh to file flag
+            "mesh_type": "dggrid",  # Mesh type identifier
         }
 
     def validate_config(self, config):
@@ -538,7 +547,10 @@ class DGGRIDConfig(BaseMeshConfig):
                     f"sDggrid_type must be 'ISEA3H' or 'ISEA4H', got {config['sDggrid_type']!r}"
                 )
         if "iResolution_index" in config and config["iResolution_index"] is not None:
-            if not isinstance(config["iResolution_index"], int) or config["iResolution_index"] < 0:
+            if (
+                not isinstance(config["iResolution_index"], int)
+                or config["iResolution_index"] < 0
+            ):
                 raise ValueError(
                     f"iResolution_index must be a non-negative integer, "
                     f"got {config['iResolution_index']}"
@@ -561,19 +573,19 @@ class RHEALPixConfig(BaseMeshConfig):
             # Output file
             "sFilename_mesh": "rhealpix_mesh.geojson",  # Output mesh filename
             # Workspace for intermediate files
-            "sWorkspace_output": None,   # Working directory for mesh generation
+            "sWorkspace_output": None,  # Working directory for mesh generation
             # Tiling options
-            "iFlag_netcdf": 0,           # 0 = vector format, 1 = NetCDF
-            "iFlag_use_tiles": 0,        # 0 = single file, 1 = tiled output
-            "nTile": None,               # Number of tiles (None = auto)
-            "tile_mode": "simple",       # 'simple', 'base', 'hierarchical', 'zone'
-            "zone_level": None,          # Zone level for zone-based tiling
-            "tiles_per_base": None,      # Tiles per base pixel (hierarchical mode)
+            "iFlag_netcdf": 0,  # 0 = vector format, 1 = NetCDF
+            "iFlag_use_tiles": 0,  # 0 = single file, 1 = tiled output
+            "nTile": None,  # Number of tiles (None = auto)
+            "tile_mode": "simple",  # 'simple', 'base', 'hierarchical', 'zone'
+            "zone_level": None,  # Zone level for zone-based tiling
+            "tiles_per_base": None,  # Tiles per base pixel (hierarchical mode)
             # Boundary
-            "pBoundary_wkt": None,       # Boundary polygon in WKT (None = global)
+            "pBoundary_wkt": None,  # Boundary polygon in WKT (None = global)
             # Common flags
-            "iFlag_global": 1,           # Global mesh flag
-            "mesh_type": "rhealpix",     # Mesh type identifier
+            "iFlag_global": 1,  # Global mesh flag
+            "mesh_type": "rhealpix",  # Mesh type identifier
         }
 
     def validate_config(self, config):
@@ -662,15 +674,17 @@ class ConfigManager:
         config = config_instance.get_default_config()
 
         # Add common parameters
-        config.update({
-            "mesh_type": mesh_type,
-            "iCase_index": 1,
-            "iFlag_standalone": 1,
-            "iFlag_global": config.get("iFlag_global", 1),
-            "sDate": None,
-            "sWorkspace_output": None,
-            "sFilename_model_configuration": None,
-        })
+        config.update(
+            {
+                "mesh_type": mesh_type,
+                "iCase_index": 1,
+                "iFlag_standalone": 1,
+                "iFlag_global": config.get("iFlag_global", 1),
+                "sDate": None,
+                "sWorkspace_output": None,
+                "sFilename_model_configuration": None,
+            }
+        )
 
         return config
 
@@ -706,7 +720,7 @@ class ConfigManager:
         Returns:
             dict: The loaded configuration
         """
-        with open(filename, "r") as f:
+        with open(filename) as f:
             config = json.load(f)
 
         # Validate if mesh_type is specified
@@ -736,6 +750,3 @@ class ConfigManager:
         # Write to file
         with open(filename, "w") as f:
             json.dump(config, f, indent=4)
-
-
-

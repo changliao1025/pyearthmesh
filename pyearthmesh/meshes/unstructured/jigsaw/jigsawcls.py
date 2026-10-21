@@ -1,31 +1,35 @@
+import datetime
+import json
 import os
 import stat
-import json
-import datetime
 from pathlib import Path
+
 from mpas_land_mesh.utilities.system import get_python_environment
-#create a simple jigsaw run case class
+
+# create a simple jigsaw run case class
 pDate = datetime.datetime.today()
-sDate_default = (
-    "{:04d}".format(pDate.year)
-    + "{:02d}".format(pDate.month)
-    + "{:02d}".format(pDate.day)
-)
+sDate_default = f"{pDate.year:04d}" + f"{pDate.month:02d}" + f"{pDate.day:02d}"
+
 
 class jigsawcase:
     """Class to represent a JIGSAW run case with configuration and file paths"""
+
     iFlag_save_mesh = 1
     sFilename_mpas_mesh_netcdf = None
     sFilename_jigsaw_mesh_netcdf = None
     sFilename_land_ocean_mask = None
     pBoundary_wkt = None
     aConfig_jigsaw = None
-    def __init__(self, aConfig_in,
+
+    def __init__(
+        self,
+        aConfig_in,
         iFlag_standalone_in=None,
         iFlag_create_directory_in=1,
         sModel_in=None,
         sDate_in=None,
-        sWorkspace_output_in=None):
+        sWorkspace_output_in=None,
+    ):
         # flags
         if iFlag_standalone_in is not None:
             self.iFlag_standalone = iFlag_standalone_in
@@ -45,9 +49,7 @@ class jigsawcase:
         else:
             iCase_index = 1
 
-
-
-        sCase_index = "{:03d}".format(iCase_index)
+        sCase_index = f"{iCase_index:03d}"
         self.iCase_index = iCase_index
 
         if sWorkspace_output_in is not None:
@@ -60,7 +62,9 @@ class jigsawcase:
             self.sFilename_mpas_mesh_netcdf = aConfig_in["sFilename_mpas_mesh_netcdf"]
 
         if "sFilename_jigsaw_mesh_netcdf" in aConfig_in:
-            self.sFilename_jigsaw_mesh_netcdf = aConfig_in["sFilename_jigsaw_mesh_netcdf"]
+            self.sFilename_jigsaw_mesh_netcdf = aConfig_in[
+                "sFilename_jigsaw_mesh_netcdf"
+            ]
 
         if "sFilename_land_ocean_mask" in aConfig_in:
             self.sFilename_land_ocean_mask = aConfig_in["sFilename_land_ocean_mask"]
@@ -74,7 +78,7 @@ class jigsawcase:
         else:
             self.sDate = sDate_default
 
-        self.sModel = 'jigsaw'
+        self.sModel = "jigsaw"
 
         sCase = self.sModel + self.sDate + sCase_index
         self.sCase = sCase
@@ -92,12 +96,14 @@ class jigsawcase:
             Path(sPath).mkdir(parents=True, exist_ok=True)
 
         if "sFilename_model_configuration" in aConfig_in:
-            self.sFilename_model_configuration = aConfig_in["sFilename_model_configuration"]
+            self.sFilename_model_configuration = aConfig_in[
+                "sFilename_model_configuration"
+            ]
         else:
             self.sFilename_model_configuration = None
 
         self.sFilename_mesh = os.path.join(
-            str(Path(self.sWorkspace_output)),  "mpas.geojson"
+            str(Path(self.sWorkspace_output)), "mpas.geojson"
         )
 
         if "iFlag_run_jigsaw" in aConfig_in:
@@ -144,13 +150,14 @@ class jigsawcase:
         self.sFilename_model_configuration. The configuration JSON
         must contain all required run_jigsaw parameters.
         """
-        from mpas_land_mesh.mesh.jigsaw.run_jigsaw import run_jigsaw
         import json
+
+        from mpas_land_mesh.mesh.jigsaw.run_jigsaw import run_jigsaw
 
         if self.sFilename_model_configuration is None:
             raise ValueError("sFilename_model_configuration is not set")
 
-        with open(self.sFilename_model_configuration, "r") as f:
+        with open(self.sFilename_model_configuration) as f:
             aConfig = json.load(f)
 
         projector = [0.0, 0.0]
@@ -196,7 +203,12 @@ class jigsawcase:
         sLine = "import os" + "\n"
         ofs_jigsaw.write(sLine)
         sLine = (
-            "os.environ['PROJ_LIB']=" + '"' + sConda_env_path + "/share/proj" + '"' + "\n"
+            "os.environ['PROJ_LIB']="
+            + '"'
+            + sConda_env_path
+            + "/share/proj"
+            + '"'
+            + "\n"
         )
         ofs_jigsaw.write(sLine)
         sLine = (
@@ -213,7 +225,8 @@ class jigsawcase:
         )
         ofs_jigsaw.write(sLine)
         sLine = (
-            "from mpas_land_mesh.mesh.mpas.create_mpas_mesh import create_mpas_mesh" + "\n"
+            "from mpas_land_mesh.mesh.mpas.create_mpas_mesh import create_mpas_mesh"
+            + "\n"
         )
         ofs_jigsaw.write(sLine)
         sLine = (
@@ -269,7 +282,7 @@ class jigsawcase:
         ofs.write(sLine)
         sLine = "#SBATCH --job-name=" + self.sCase + "\n"
         ofs.write(sLine)
-        sHour = "{:02d}".format(hours_in)
+        sHour = f"{hours_in:02d}"
         sLine = "#SBATCH -t " + sHour + ":00:00" + "\n"
         ofs.write(sLine)
         sLine = "#SBATCH --nodes=1" + "\n"
@@ -292,7 +305,9 @@ class jigsawcase:
         ofs.write(sLine)
         sLine = "module load python/miniconda2024May29 " + "\n"
         ofs.write(sLine)
-        sLine = "source /share/apps/python/miniconda2024May29/etc/profile.d/conda.sh" + "\n"
+        sLine = (
+            "source /share/apps/python/miniconda2024May29/etc/profile.d/conda.sh" + "\n"
+        )
         ofs.write(sLine)
         sLine = "conda activate " + sConda_env_name + "\n"
         ofs.write(sLine)
@@ -308,4 +323,3 @@ class jigsawcase:
         ofs.write(sLine)
         ofs.close()
         return
-

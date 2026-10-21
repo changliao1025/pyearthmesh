@@ -1,29 +1,33 @@
+import datetime
+import json
 import os
 import stat
-import json
-import datetime
 from pathlib import Path
+
 from pyearth.system.python import get_python_environment
-#create a simple mesh run case class
+
+# create a simple mesh run case class
 pDate = datetime.datetime.today()
-sDate_default = (
-    "{:04d}".format(pDate.year)
-    + "{:02d}".format(pDate.month)
-    + "{:02d}".format(pDate.day)
-)
+sDate_default = f"{pDate.year:04d}" + f"{pDate.month:02d}" + f"{pDate.day:02d}"
+
 
 class meshcase:
     """Class to represent a mesh run case with configuration and file paths"""
+
     iFlag_save_mesh = 1
     sFilename_land_ocean_mask = None
     pBoundary_wkt = None
     aConfig_mesh = None
-    def __init__(self, aConfig_in,
+
+    def __init__(
+        self,
+        aConfig_in,
         iFlag_standalone_in=None,
         iFlag_create_directory_in=1,
         sModel_in=None,
         sDate_in=None,
-        sWorkspace_output_in=None):
+        sWorkspace_output_in=None,
+    ):
         # flags
         if iFlag_standalone_in is not None:
             self.iFlag_standalone = iFlag_standalone_in
@@ -43,7 +47,7 @@ class meshcase:
         else:
             iCase_index = 1
 
-        sCase_index = "{:03d}".format(iCase_index)
+        sCase_index = f"{iCase_index:03d}"
         self.iCase_index = iCase_index
 
         if sWorkspace_output_in is not None:
@@ -51,7 +55,6 @@ class meshcase:
         else:
             if "sWorkspace_output" in aConfig_in:
                 self.sWorkspace_output = aConfig_in["sWorkspace_output"]
-
 
         if "sFilename_land_ocean_mask" in aConfig_in:
             self.sFilename_land_ocean_mask = aConfig_in["sFilename_land_ocean_mask"]
@@ -81,20 +84,19 @@ class meshcase:
             Path(sPath).mkdir(parents=True, exist_ok=True)
 
         if "sFilename_model_configuration" in aConfig_in:
-            self.sFilename_model_configuration = aConfig_in["sFilename_model_configuration"]
+            self.sFilename_model_configuration = aConfig_in[
+                "sFilename_model_configuration"
+            ]
         else:
             self.sFilename_model_configuration = None
 
         self.sFilename_mesh = os.path.join(
-            str(Path(self.sWorkspace_output)),  "mesh.geojson"
+            str(Path(self.sWorkspace_output)), "mesh.geojson"
         )
 
         if "sMesh_type" in aConfig_in:
             self.sMesh_type = aConfig_in["sMesh_type"]
         else:
-            self.sMesh_type = 'mpas'
-
-
-
+            self.sMesh_type = "mpas"
 
         return

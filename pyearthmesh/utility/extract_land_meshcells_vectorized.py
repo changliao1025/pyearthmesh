@@ -1,20 +1,25 @@
-import geopandas as gpd
-import pandas as pd
-import numpy as np
 import os
 import sys
-from shapely.strtree import STRtree
-from shapely.geometry import Point
 from concurrent.futures import ProcessPoolExecutor
 
+import geopandas as gpd
+import numpy as np
+import pandas as pd
 from retired import mesh
+from shapely.geometry import Point
+from shapely.strtree import STRtree
 
-def extract_land_meshcells_vectorized(mesh_path, land_path, output_path,
-                        iFlag_multi_tile=0,
-                        sExtension_in=None,
-                        sExtension_out=None,
-                        iParallel_in=0,
-                        nWorker_in=None):
+
+def extract_land_meshcells_vectorized(
+    mesh_path,
+    land_path,
+    output_path,
+    iFlag_multi_tile=0,
+    sExtension_in=None,
+    sExtension_out=None,
+    iParallel_in=0,
+    nWorker_in=None,
+):
     """
     Efficiently filters millions of mesh cells against land polygons using STRtree spatial indexing.
 
@@ -58,7 +63,7 @@ def extract_land_meshcells_vectorized(mesh_path, land_path, output_path,
             sExtension_in=sExtension_in,
             sExtension_out=sExtension_out,
             iParallel_in=iParallel_in,
-            nWorker_in=nWorker_in
+            nWorker_in=nWorker_in,
         )
 
     # Single-file mode
@@ -85,7 +90,7 @@ def _filter_mesh_by_land_single_file(mesh_path, land_path, output_path):
     print(f"Processing: {mesh_path}")
     print(f"Loading land polygons from: {land_path}")
     if os.path.exists(output_path):
-        #remove first
+        # remove first
         os.remove(output_path)
 
     # OPTIMIZATION 1: Use pyogrio for faster land loading
@@ -101,7 +106,7 @@ def _filter_mesh_by_land_single_file(mesh_path, land_path, output_path):
     # Testing a point inside a polygon is significantly faster than
     # testing if two polygons overlap.
     print("Calculating centroids...")
-    #centroids = mesh.geometry.centroid
+    # centroids = mesh.geometry.centroid
     # Fix 1: Pass numpy array, not GeoSeries
     centroids_arr = mesh.geometry.centroid.values  # numpy array of Shapely Points
 
@@ -116,7 +121,7 @@ def _filter_mesh_by_land_single_file(mesh_path, land_path, output_path):
 
     # Fix 2: Use 'within' — semantically correct for point-in-polygon,
     # and avoids the boundary-intersection path that 'intersects' also checks
-    possible_indices = tree.query(centroids_arr, predicate='within')
+    possible_indices = tree.query(centroids_arr, predicate="within")
 
     # The result is [query_geometry_idx, tree_geometry_idx]. Since the
     # query geometries are mesh centroids, possible_indices[0] contains the
@@ -133,7 +138,11 @@ def _filter_mesh_by_land_single_file(mesh_path, land_path, output_path):
     land_mesh = mesh[mask].reset_index(drop=True)
 
     # Drop geometry bbox columns that GDAL/OGR exposes as regular fields from GeoParquet
-    bbox_cols = [c for c in land_mesh.columns if c.startswith('geometry_bbox') or c.startswith('__bbox')]
+    bbox_cols = [
+        c
+        for c in land_mesh.columns
+        if c.startswith("geometry_bbox") or c.startswith("__bbox")
+    ]
     if bbox_cols:
         land_mesh = land_mesh.drop(columns=bbox_cols)
 
@@ -143,11 +152,11 @@ def _filter_mesh_by_land_single_file(mesh_path, land_path, output_path):
 
     # Auto-detect format based on file extension
     file_ext = os.path.splitext(output_path)[1].lower()
-    if file_ext == '.parquet':
+    if file_ext == ".parquet":
         land_mesh.to_parquet(output_path, index=False)
-    elif file_ext == '.gpkg':
+    elif file_ext == ".gpkg":
         land_mesh.to_file(output_path, driver="GPKG", index=False)
-    elif file_ext in ['.shp', '.geojson', '.json']:
+    elif file_ext in [".shp", ".geojson", ".json"]:
         land_mesh.to_file(output_path, index=False)
     else:
         # Default to parquet for efficiency with large datasets
@@ -178,7 +187,7 @@ def _filter_single_tile_worker(task):
 
     # Generate output filename
     sBasename = os.path.splitext(os.path.basename(sFile_mesh_in))[0]
-    sFile_out = os.path.join(sWorkspace_out, sBasename + '_land' + sExtension_out)
+    sFile_out = os.path.join(sWorkspace_out, sBasename + "_land" + sExtension_out)
 
     print("=" * 80)
     print(f"Processing tile: {sFile_mesh_in}")
@@ -186,23 +195,21 @@ def _filter_single_tile_worker(task):
     print("=" * 80)
 
     # Call the single-file filtering function
-    nSaved = _filter_mesh_by_land_single_file(
-        sFile_mesh_in,
-        sFilename_land,
-        sFile_out
-    )
+    nSaved = _filter_mesh_by_land_single_file(sFile_mesh_in, sFilename_land, sFile_out)
 
     print(f"Completed filtering for {sFile_mesh_in}: {nSaved} cells saved")
     return sFile_out
 
 
-def _filter_mesh_by_land_multi_tile(sWorkspace_in,
-                                     sFilename_land,
-                                     sWorkspace_out,
-                                     sExtension_in,
-                                     sExtension_out=None,
-                                     iParallel_in=0,
-                                     nWorker_in=None):
+def _filter_mesh_by_land_multi_tile(
+    sWorkspace_in,
+    sFilename_land,
+    sWorkspace_out,
+    sExtension_in,
+    sExtension_out=None,
+    iParallel_in=0,
+    nWorker_in=None,
+):
     """
     Internal implementation: Filter mesh cells from multiple tile files in a workspace.
 
@@ -266,7 +273,7 @@ def _filter_mesh_by_land_multi_tile(sWorkspace_in,
         files.sort()
 
         # Exclude files that have '_land' in the name to avoid re-processing
-        files = [f for f in files if '_land' not in f]
+        files = [f for f in files if "_land" not in f]
 
         for file in files:
             if file.endswith(sExtension_in):
@@ -275,7 +282,9 @@ def _filter_mesh_by_land_multi_tile(sWorkspace_in,
 
     nFile = len(aTask)
     print("=" * 80)
-    print(f"Found {nFile} matching files with extension '{sExtension_in}' in: {sWorkspace_in}")
+    print(
+        f"Found {nFile} matching files with extension '{sExtension_in}' in: {sWorkspace_in}"
+    )
     print("=" * 80)
 
     if nFile == 0:
@@ -283,7 +292,9 @@ def _filter_mesh_by_land_multi_tile(sWorkspace_in,
         return
 
     if iParallel_in and nFile > 1:
-        print(f"Processing {nFile} files in parallel with {nWorker_in or 'default'} workers...")
+        print(
+            f"Processing {nFile} files in parallel with {nWorker_in or 'default'} workers..."
+        )
         print("=" * 80)
         with ProcessPoolExecutor(max_workers=nWorker_in) as executor:
             for _ in executor.map(_filter_single_tile_worker, aTask):
@@ -299,6 +310,3 @@ def _filter_mesh_by_land_multi_tile(sWorkspace_in,
     print("Land mesh cell filtering completed for all matching files in the workspace.")
     print(f"Output files saved to: {sWorkspace_out}")
     print("=" * 80)
-
-
-

@@ -1,30 +1,31 @@
-import os, stat, platform, gc, time
-import numpy as np
-from pathlib import Path
-import subprocess
 import datetime
-from shutil import copy2
-from osgeo import osr, ogr, gdal
-import healpy as hp
+import gc
 import json
-from typing import List, Dict, Tuple, Optional
-from pyearth.system.define_global_variables import earth_radius
-from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
+import os
+import platform
+import stat
+import subprocess
+import time
+from pathlib import Path
+from shutil import copy2
+from typing import Dict, List, Optional, Tuple
+
+import healpy as hp
+import numpy as np
+from osgeo import gdal, ogr, osr
 from pyearth.gis.gdal.gdal_vector_format_support import get_vector_driver_from_filename
+from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
+from pyearth.system.define_global_variables import earth_radius
+
 from pyearthmesh.utility.convert_coordinates import convert_gcs_coordinates_to_meshcell
 
-
 pDate = datetime.datetime.today()
-sDate_default = (
-    "{:04d}".format(pDate.year)
-    + "{:02d}".format(pDate.month)
-    + "{:02d}".format(pDate.day)
-)
+sDate_default = f"{pDate.year:04d}" + f"{pDate.month:02d}" + f"{pDate.day:02d}"
 
 slash = os.sep
 
-#this module use the dggal tool:
-#https://github.com/ecere/dggal
+# this module use the dggal tool:
+# https://github.com/ecere/dggal
 
 
 class HEALPixTileStructure:
@@ -35,8 +36,12 @@ class HEALPixTileStructure:
     with optional hierarchical subdivision.
     """
 
-    def __init__(self, level: int, tile_scheme: str = 'hierarchical',
-                 tiles_per_base: Optional[int] = None):
+    def __init__(
+        self,
+        level: int,
+        tile_scheme: str = "hierarchical",
+        tiles_per_base: Optional[int] = None,
+    ):
         """
         Initialize HEALPix tile structure.
 
@@ -50,15 +55,15 @@ class HEALPixTileStructure:
             Number of tiles per base pixel for hierarchical scheme
         """
         self.level = level
-        self.nside = 2 ** level
+        self.nside = 2**level
         self.npix = hp.nside2npix(self.nside)
         self.base_tiles = 12
         self.tile_scheme = tile_scheme
 
-        if tile_scheme == 'base':
+        if tile_scheme == "base":
             self.tiles_per_base = 1
             self.total_tiles = 12
-        elif tile_scheme == 'hierarchical':
+        elif tile_scheme == "hierarchical":
             if tiles_per_base is None:
                 self.tiles_per_base = self._calculate_optimal_tiles_per_base()
             else:
@@ -80,13 +85,13 @@ class HEALPixTileStructure:
         # Round to nearest power of 4 for clean subdivision
         if tiles_per_base > 1:
             power = int(np.ceil(np.log(tiles_per_base) / np.log(4)))
-            tiles_per_base = 4 ** power
+            tiles_per_base = 4**power
 
         return tiles_per_base
 
     def _build_tile_structure(self):
         """Build tile structure and metadata."""
-        if self.tile_scheme == 'base':
+        if self.tile_scheme == "base":
             self._build_base_tile_structure()
         else:
             self._build_hierarchical_tile_structure()
@@ -99,10 +104,10 @@ class HEALPixTileStructure:
             pix_end = (base_pix + 1) * pixels_per_base
 
             self.tile_metadata[base_pix] = {
-                'tile_id': base_pix,
-                'base_pixel': base_pix,
-                'pix_range': (pix_start, pix_end),
-                'n_pixels': pixels_per_base
+                "tile_id": base_pix,
+                "base_pixel": base_pix,
+                "pix_range": (pix_start, pix_end),
+                "n_pixels": pixels_per_base,
             }
 
     def _build_hierarchical_tile_structure(self):
@@ -112,21 +117,23 @@ class HEALPixTileStructure:
         tile_id = 0
         for base_pix in range(12):
             for sub_idx in range(self.tiles_per_base):
-                pix_start = (base_pix * self.tiles_per_base + sub_idx) * pixels_per_subtile
+                pix_start = (
+                    base_pix * self.tiles_per_base + sub_idx
+                ) * pixels_per_subtile
                 pix_end = pix_start + pixels_per_subtile
 
                 self.tile_metadata[tile_id] = {
-                    'tile_id': tile_id,
-                    'base_pixel': base_pix,
-                    'sub_index': sub_idx,
-                    'pix_range': (pix_start, pix_end),
-                    'n_pixels': pixels_per_subtile
+                    "tile_id": tile_id,
+                    "base_pixel": base_pix,
+                    "sub_index": sub_idx,
+                    "pix_range": (pix_start, pix_end),
+                    "n_pixels": pixels_per_subtile,
                 }
                 tile_id += 1
 
     def get_tile_for_pixel(self, pix: int) -> int:
         """Get tile ID for a HEALPix pixel."""
-        if self.tile_scheme == 'base':
+        if self.tile_scheme == "base":
             return pix // (self.npix // 12)
         else:
             pixels_per_tile = self.npix // self.total_tiles
@@ -134,8 +141,9 @@ class HEALPixTileStructure:
 
     def get_tile_pixels(self, tile_id: int) -> np.ndarray:
         """Get all pixel indices for a tile."""
-        pix_start, pix_end = self.tile_metadata[tile_id]['pix_range']
+        pix_start, pix_end = self.tile_metadata[tile_id]["pix_range"]
         return np.arange(pix_start, pix_end, dtype=np.int64)
+
 
 class ZoneBasedTileStructure:
     """
@@ -157,18 +165,22 @@ class ZoneBasedTileStructure:
             HEALPix level for zones (coarse resolution)
         """
         if zone_level >= mesh_level:
-            raise ValueError(f"zone_level ({zone_level}) must be < mesh_level ({mesh_level})")
+            raise ValueError(
+                f"zone_level ({zone_level}) must be < mesh_level ({mesh_level})"
+            )
 
         self.mesh_level = mesh_level
         self.zone_level = zone_level
-        self.mesh_nside = 2 ** mesh_level
-        self.zone_nside = 2 ** zone_level
+        self.mesh_nside = 2**mesh_level
+        self.zone_nside = 2**zone_level
         self.n_zones = hp.nside2npix(self.zone_nside)
         self.n_mesh_pixels = hp.nside2npix(self.mesh_nside)
         self.pixels_per_zone = self.n_mesh_pixels // self.n_zones
 
         print(f"Zone-based tiling: mesh_level={mesh_level}, zone_level={zone_level}")
-        print(f"  Total zones: {self.n_zones}, Pixels per zone: {self.pixels_per_zone:,}")
+        print(
+            f"  Total zones: {self.n_zones}, Pixels per zone: {self.pixels_per_zone:,}"
+        )
 
     def get_zone_for_pixel(self, pix: int) -> int:
         """Get zone ID for a mesh pixel."""
@@ -179,6 +191,7 @@ class ZoneBasedTileStructure:
         pix_start = zone_id * self.pixels_per_zone
         pix_end = (zone_id + 1) * self.pixels_per_zone
         return np.arange(pix_start, pix_end, dtype=np.int64)
+
 
 def healpix_find_level_by_resolution(sHealpix_type, dResolution_meter):
     """
@@ -200,7 +213,7 @@ def healpix_find_level_by_resolution(sHealpix_type, dResolution_meter):
     dRadius_earth = earth_radius
 
     # rHEALPix aperture 9 (each level divides by 3)
-    if sHealpix_type.lower() == 'rhealpix':
+    if sHealpix_type.lower() == "rhealpix":
         # Base resolution at level 0 (approximate)
         # For rHEALPix, level 0 has 12 base cells on a sphere
         # Average cell edge length ≈ sqrt(4πR²/12) ≈ 4,759 km
@@ -220,7 +233,7 @@ def healpix_find_level_by_resolution(sHealpix_type, dResolution_meter):
         if iLevel < 0:
             iLevel = 0
 
-    elif sHealpix_type.lower() == 'healpix':
+    elif sHealpix_type.lower() == "healpix":
         # HEALPix aperture 4 (each level divides by 2)
         dResolution_level0 = np.sqrt(4 * np.pi * dRadius_earth**2 / 12)
         aperture_factor = 2.0
@@ -234,6 +247,7 @@ def healpix_find_level_by_resolution(sHealpix_type, dResolution_meter):
         raise ValueError(f"Unknown HEALPix type: {sHealpix_type}")
 
     return iLevel
+
 
 def healpix_find_resolution_by_level(sHealpix_type, iLevel):
     """
@@ -254,33 +268,36 @@ def healpix_find_resolution_by_level(sHealpix_type, iLevel):
     # Earth's radius in meters
     dRadius_earth = earth_radius
 
-    if sHealpix_type.lower() == 'rhealpix':
+    if sHealpix_type.lower() == "rhealpix":
         dResolution_level0 = np.sqrt(4 * np.pi * dRadius_earth**2 / 12)
         aperture_factor = 3.0
 
-        dResolution = dResolution_level0 / (aperture_factor ** iLevel)
+        dResolution = dResolution_level0 / (aperture_factor**iLevel)
 
-    elif sHealpix_type.lower() == 'healpix':
+    elif sHealpix_type.lower() == "healpix":
         dResolution_level0 = np.sqrt(4 * np.pi * dRadius_earth**2 / 12)
         aperture_factor = 2.0
 
-        dResolution = dResolution_level0 / (aperture_factor ** iLevel)
+        dResolution = dResolution_level0 / (aperture_factor**iLevel)
 
     else:
         raise ValueError(f"Unknown HEALPix type: {sHealpix_type}")
 
     return dResolution
 
-def create_healpix_mesh(dResolution_meter_in,
+
+def create_healpix_mesh(
+    dResolution_meter_in,
     sFilename_mesh,
     sWorkspace_output,
-    iFlag_netcdf = 0,
+    iFlag_netcdf=0,
     pBoundary_in=None,
     iFlag_use_tiles=0,
     nTile=None,
-    tile_mode='simple',
+    tile_mode="simple",
     zone_level=None,
-    tiles_per_base=None):
+    tiles_per_base=None,
+):
     """
     Create a spherical mesh based on the HEALPix tessellation.
 
@@ -319,22 +336,24 @@ def create_healpix_mesh(dResolution_meter_in,
         If advanced tiling: dict with 'filenames', 'tile_structure', 'metadata'
     """
 
-    #find the level based on the resolution
-    iLevel = healpix_find_level_by_resolution('HEALPix', dResolution_meter_in)
+    # find the level based on the resolution
+    iLevel = healpix_find_level_by_resolution("HEALPix", dResolution_meter_in)
     print("Determined HEALPix level: " + str(iLevel))
-    dResolution_actual = healpix_find_resolution_by_level('HEALPix', iLevel)
+    dResolution_actual = healpix_find_resolution_by_level("HEALPix", iLevel)
     if dResolution_actual < dResolution_meter_in:
-        print(f"Warning: Actual resolution ({dResolution_actual:.1f} m) is finer than target resolution ({dResolution_meter_in:.1f} m). Consider using a coarser level for better performance.")
-        #decrease by 1 level to get a coarser resolution
+        print(
+            f"Warning: Actual resolution ({dResolution_actual:.1f} m) is finer than target resolution ({dResolution_meter_in:.1f} m). Consider using a coarser level for better performance."
+        )
+        # decrease by 1 level to get a coarser resolution
         iLevel = iLevel - 1
     else:
         print(f"Actual resolution at this level: {dResolution_actual:.1f} meters")
 
-    #now generate the mesh using dggal
+    # now generate the mesh using dggal
     # example command: dgg isea3h -crs ico grid 3 > isea3h-level3-isea.geojson
 
-    nside = 2 ** iLevel  # nside is 2^level for HEALPix.
-    cell_area = hp.nside2pixarea(nside, degrees=False) * (earth_radius ** 2)
+    nside = 2**iLevel  # nside is 2^level for HEALPix.
+    cell_area = hp.nside2pixarea(nside, degrees=False) * (earth_radius**2)
 
     # 1. Get total number of pixels
     npix = hp.nside2npix(nside)
@@ -343,21 +362,28 @@ def create_healpix_mesh(dResolution_meter_in,
     # HEALPix provides equal-area tessellation of the entire sphere
     pix_indices = np.arange(npix, dtype=np.int64)
 
-    #get the file extension of the output file
+    # get the file extension of the output file
     sFilename_mesh_full = os.path.join(sWorkspace_output, sFilename_mesh)
     sExtension = Path(sFilename_mesh_full).suffix.lower()
-    if sExtension == '.nc':
+    if sExtension == ".nc":
         iFlag_netcdf = 1
 
     # Determine if we should use tiles
     n_cells = len(pix_indices)
 
     # Handle advanced tiling modes
-    if iFlag_use_tiles == 1 and tile_mode in ['base', 'hierarchical', 'zone']:
+    if iFlag_use_tiles == 1 and tile_mode in ["base", "hierarchical", "zone"]:
         print(f"\nUsing advanced tiling mode: {tile_mode}")
         return _create_healpix_mesh_with_advanced_tiles(
-            iLevel, nside, pix_indices, sFilename_mesh, sWorkspace_output,
-            iFlag_netcdf, tile_mode, zone_level, tiles_per_base
+            iLevel,
+            nside,
+            pix_indices,
+            sFilename_mesh,
+            sWorkspace_output,
+            iFlag_netcdf,
+            tile_mode,
+            zone_level,
+            tiles_per_base,
         )
 
     # Auto-determine number of tiles if not specified (legacy mode)
@@ -368,7 +394,7 @@ def create_healpix_mesh(dResolution_meter_in,
 
     # If not using tiles or only 1 tile, use original single-file approach
     if iFlag_use_tiles == 0 or nTile == 1:
-        #remove the output file if it already exists
+        # remove the output file if it already exists
         if os.path.exists(sFilename_mesh_full):
             gc.collect()
             try:
@@ -378,19 +404,22 @@ def create_healpix_mesh(dResolution_meter_in,
 
         if iFlag_netcdf == 1:
             import netCDF4 as nc
-            #save in netcdf format
-            pDataset_out = nc.Dataset(sFilename_mesh_full, 'w', format='NETCDF4')
-            pDataset_out.createDimension('cell', len(pix_indices))
-            pDataset_out.createVariable('cellid', 'i4', ('cell',))
-            pDataset_out.createVariable('lon', 'f4', ('cell',))
-            pDataset_out.createVariable('lat', 'f4', ('cell',))
-            pDataset_out.createVariable('area', 'f8', ('cell',))
-            #also save the vertices of the cells
-            pDataset_out.createDimension('nv', 4) #careful, this assumes 4 vertices per cell, which is true for HEALPix but not for rHEALPix?
-            pDataset_out.createVariable('xv', 'f4', ('cell', 'nv'))
-            pDataset_out.createVariable('yv', 'f4', ('cell', 'nv'))
 
-            #save the cell centers and vertices using a streaming method to avoid memory issues
+            # save in netcdf format
+            pDataset_out = nc.Dataset(sFilename_mesh_full, "w", format="NETCDF4")
+            pDataset_out.createDimension("cell", len(pix_indices))
+            pDataset_out.createVariable("cellid", "i4", ("cell",))
+            pDataset_out.createVariable("lon", "f4", ("cell",))
+            pDataset_out.createVariable("lat", "f4", ("cell",))
+            pDataset_out.createVariable("area", "f8", ("cell",))
+            # also save the vertices of the cells
+            pDataset_out.createDimension(
+                "nv", 4
+            )  # careful, this assumes 4 vertices per cell, which is true for HEALPix but not for rHEALPix?
+            pDataset_out.createVariable("xv", "f4", ("cell", "nv"))
+            pDataset_out.createVariable("yv", "f4", ("cell", "nv"))
+
+            # save the cell centers and vertices using a streaming method to avoid memory issues
             chunk_size = 10000  # Process 10,000 cells at a time
 
             for chunk_start in range(0, n_cells, chunk_size):
@@ -399,7 +428,9 @@ def create_healpix_mesh(dResolution_meter_in,
                 chunk_len = len(chunk_pix)
 
                 # Pre-allocate arrays for this chunk
-                chunk_cellids = np.arange(chunk_start + 1, chunk_end + 1, dtype=np.int32)
+                chunk_cellids = np.arange(
+                    chunk_start + 1, chunk_end + 1, dtype=np.int32
+                )
                 chunk_lons = np.zeros(chunk_len, dtype=np.float32)
                 chunk_lats = np.zeros(chunk_len, dtype=np.float32)
                 chunk_xv = np.zeros((chunk_len, 4), dtype=np.float32)
@@ -430,7 +461,9 @@ def create_healpix_mesh(dResolution_meter_in,
                             lons = np.where(np.abs(lons - 180) < 1e-10, -180.0, lons)
 
                     # Get cell center
-                    center_lon, center_lat = hp.pix2ang(nside, pix, nest=True, lonlat=True)
+                    center_lon, center_lat = hp.pix2ang(
+                        nside, pix, nest=True, lonlat=True
+                    )
                     # Convert center longitude from [0, 360] to [-180, 180]
                     center_lon = center_lon - 360 if center_lon > 180 else center_lon
 
@@ -441,34 +474,38 @@ def create_healpix_mesh(dResolution_meter_in,
                     chunk_yv[i, :] = lats
 
                 # Write entire chunk to NetCDF at once
-                pDataset_out.variables['cellid'][chunk_start:chunk_end] = chunk_cellids
-                pDataset_out.variables['lon'][chunk_start:chunk_end] = chunk_lons
-                pDataset_out.variables['lat'][chunk_start:chunk_end] = chunk_lats
-                pDataset_out.variables['area'][chunk_start:chunk_end] = cell_area
-                pDataset_out.variables['xv'][chunk_start:chunk_end, :] = chunk_xv
-                pDataset_out.variables['yv'][chunk_start:chunk_end, :] = chunk_yv
+                pDataset_out.variables["cellid"][chunk_start:chunk_end] = chunk_cellids
+                pDataset_out.variables["lon"][chunk_start:chunk_end] = chunk_lons
+                pDataset_out.variables["lat"][chunk_start:chunk_end] = chunk_lats
+                pDataset_out.variables["area"][chunk_start:chunk_end] = cell_area
+                pDataset_out.variables["xv"][chunk_start:chunk_end, :] = chunk_xv
+                pDataset_out.variables["yv"][chunk_start:chunk_end, :] = chunk_yv
 
                 # Optional: print progress
                 if (chunk_end % 50000 == 0) or (chunk_end == n_cells):
-                    print(f"Processed {chunk_end}/{n_cells} cells ({100*chunk_end/n_cells:.1f}%)")
+                    print(
+                        f"Processed {chunk_end}/{n_cells} cells ({100*chunk_end/n_cells:.1f}%)"
+                    )
 
             # Close the NetCDF file
             pDataset_out.close()
 
         else:
-            #use gis format for easy visualization
+            # use gis format for easy visualization
             pDriver = get_vector_driver_from_filename(sFilename_mesh_full)
             pDataset_out = pDriver.CreateDataSource(sFilename_mesh_full)
 
             pSRS = osr.SpatialReference()
             pSRS.ImportFromEPSG(4326)  # WGS84 Lat/Lon
-            pLayer_out = pDataset_out.CreateLayer('healpix_mesh', srs=pSRS, geom_type=ogr.wkbPolygon)
-            pLayer_out.CreateField(ogr.FieldDefn('cellid', ogr.OFTInteger))
-            pLayer_out.CreateField(ogr.FieldDefn('lon', ogr.OFTReal))
-            pLayer_out.CreateField(ogr.FieldDefn('lat', ogr.OFTReal))
-            pLayer_out.CreateField(ogr.FieldDefn('area', ogr.OFTReal))
-            #add a string field for healpix id if needed in the future, but for now we can just use the cellid integer field
-            pLayer_out.CreateField(ogr.FieldDefn('healpixid', ogr.OFTString))
+            pLayer_out = pDataset_out.CreateLayer(
+                "healpix_mesh", srs=pSRS, geom_type=ogr.wkbPolygon
+            )
+            pLayer_out.CreateField(ogr.FieldDefn("cellid", ogr.OFTInteger))
+            pLayer_out.CreateField(ogr.FieldDefn("lon", ogr.OFTReal))
+            pLayer_out.CreateField(ogr.FieldDefn("lat", ogr.OFTReal))
+            pLayer_out.CreateField(ogr.FieldDefn("area", ogr.OFTReal))
+            # add a string field for healpix id if needed in the future, but for now we can just use the cellid integer field
+            pLayer_out.CreateField(ogr.FieldDefn("healpixid", ogr.OFTString))
 
             # Use transactions for better performance
             chunk_size = 1000  # Commit every 1000 features
@@ -500,7 +537,9 @@ def create_healpix_mesh(dResolution_meter_in,
                             lons = np.where(np.abs(lons - 180) < 1e-10, -180.0, lons)
 
                     # Get cell center
-                    center_lon, center_lat = hp.pix2ang(nside, pix, nest=True, lonlat=True)
+                    center_lon, center_lat = hp.pix2ang(
+                        nside, pix, nest=True, lonlat=True
+                    )
                     # Convert center longitude from [0, 360] to [-180, 180]
                     center_lon = center_lon - 360 if center_lon > 180 else center_lon
                     # Create a polygon for this cell
@@ -514,12 +553,12 @@ def create_healpix_mesh(dResolution_meter_in,
 
                     # Create a feature for this cell
                     feature = ogr.Feature(pLayer_out.GetLayerDefn())
-                    feature.SetField('cellid', int(chunk_start + i + 1))
-                    feature.SetField('lon', float(center_lon))
-                    feature.SetField('lat', float(center_lat))
-                    feature.SetField('healpixid', str(pix))
+                    feature.SetField("cellid", int(chunk_start + i + 1))
+                    feature.SetField("lon", float(center_lon))
+                    feature.SetField("lat", float(center_lat))
+                    feature.SetField("healpixid", str(pix))
                     feature.SetGeometry(poly)
-                    feature.SetField('area', float(cell_area))
+                    feature.SetField("area", float(cell_area))
                     pLayer_out.CreateFeature(feature)
                     feature = None
 
@@ -528,7 +567,9 @@ def create_healpix_mesh(dResolution_meter_in,
 
                 # Optional: print progress
                 if (chunk_end % 10000 == 0) or (chunk_end == n_cells):
-                    print(f"Processed {chunk_end}/{n_cells} cells ({100*chunk_end/n_cells:.1f}%)")
+                    print(
+                        f"Processed {chunk_end}/{n_cells} cells ({100*chunk_end/n_cells:.1f}%)"
+                    )
 
             pDataset_out.FlushCache()
             pDataset_out = None
@@ -567,20 +608,23 @@ def create_healpix_mesh(dResolution_meter_in,
 
             tile_filenames.append(sFilename_tile)
 
-            print(f"Creating tile {iTile+1}/{nTile}: {sFilename_tile} ({len(tile_pix_indices)} cells)")
+            print(
+                f"Creating tile {iTile+1}/{nTile}: {sFilename_tile} ({len(tile_pix_indices)} cells)"
+            )
 
             if iFlag_netcdf == 1:
                 import netCDF4 as nc
+
                 # Save tile in NetCDF format
-                pDataset_tile = nc.Dataset(sFilename_tile_full, 'w', format='NETCDF4')
-                pDataset_tile.createDimension('cell', len(tile_pix_indices))
-                pDataset_tile.createVariable('cellid', 'i4', ('cell',))
-                pDataset_tile.createVariable('lon', 'f4', ('cell',))
-                pDataset_tile.createVariable('lat', 'f4', ('cell',))
-                pDataset_tile.createVariable('area', 'f8', ('cell',))
-                pDataset_tile.createDimension('nv', 4)
-                pDataset_tile.createVariable('xv', 'f4', ('cell', 'nv'))
-                pDataset_tile.createVariable('yv', 'f4', ('cell', 'nv'))
+                pDataset_tile = nc.Dataset(sFilename_tile_full, "w", format="NETCDF4")
+                pDataset_tile.createDimension("cell", len(tile_pix_indices))
+                pDataset_tile.createVariable("cellid", "i4", ("cell",))
+                pDataset_tile.createVariable("lon", "f4", ("cell",))
+                pDataset_tile.createVariable("lat", "f4", ("cell",))
+                pDataset_tile.createVariable("area", "f8", ("cell",))
+                pDataset_tile.createDimension("nv", 4)
+                pDataset_tile.createVariable("xv", "f4", ("cell", "nv"))
+                pDataset_tile.createVariable("yv", "f4", ("cell", "nv"))
 
                 # Add tile metadata
                 pDataset_tile.tile_index = iTile
@@ -596,7 +640,11 @@ def create_healpix_mesh(dResolution_meter_in,
                     chunk_pix = tile_pix_indices[chunk_start:chunk_end]
                     chunk_len = len(chunk_pix)
 
-                    chunk_cellids = np.arange(tile_start + chunk_start + 1, tile_start + chunk_end + 1, dtype=np.int32)
+                    chunk_cellids = np.arange(
+                        tile_start + chunk_start + 1,
+                        tile_start + chunk_end + 1,
+                        dtype=np.int32,
+                    )
                     chunk_lons = np.zeros(chunk_len, dtype=np.float32)
                     chunk_lats = np.zeros(chunk_len, dtype=np.float32)
                     chunk_xv = np.zeros((chunk_len, 4), dtype=np.float32)
@@ -606,27 +654,33 @@ def create_healpix_mesh(dResolution_meter_in,
                         corners = hp.boundaries(nside, pix, step=1, nest=True)
                         lons, lats = hp.vec2ang(corners.T, lonlat=True)
                         # Convert longitude from [0, 360] to [-180, 180]
-                        #if all equal or larger than 180
+                        # if all equal or larger than 180
                         if np.all(lons >= 180):
                             lons = lons - 360
                         else:
                             lons = np.where(lons >= 180, lons - 360, lons)
 
-                        center_lon, center_lat = hp.pix2ang(nside, pix, nest=True, lonlat=True)
+                        center_lon, center_lat = hp.pix2ang(
+                            nside, pix, nest=True, lonlat=True
+                        )
                         # Convert center longitude from [0, 360] to [-180, 180]
-                        center_lon = center_lon - 360 if center_lon > 180 else center_lon
+                        center_lon = (
+                            center_lon - 360 if center_lon > 180 else center_lon
+                        )
 
                         chunk_lons[i] = center_lon
                         chunk_lats[i] = center_lat
                         chunk_xv[i, :] = lons
                         chunk_yv[i, :] = lats
 
-                    pDataset_tile.variables['cellid'][chunk_start:chunk_end] = chunk_cellids
-                    pDataset_tile.variables['lon'][chunk_start:chunk_end] = chunk_lons
-                    pDataset_tile.variables['lat'][chunk_start:chunk_end] = chunk_lats
-                    pDataset_tile.variables['area'][chunk_start:chunk_end] = cell_area
-                    pDataset_tile.variables['xv'][chunk_start:chunk_end, :] = chunk_xv
-                    pDataset_tile.variables['yv'][chunk_start:chunk_end, :] = chunk_yv
+                    pDataset_tile.variables["cellid"][
+                        chunk_start:chunk_end
+                    ] = chunk_cellids
+                    pDataset_tile.variables["lon"][chunk_start:chunk_end] = chunk_lons
+                    pDataset_tile.variables["lat"][chunk_start:chunk_end] = chunk_lats
+                    pDataset_tile.variables["area"][chunk_start:chunk_end] = cell_area
+                    pDataset_tile.variables["xv"][chunk_start:chunk_end, :] = chunk_xv
+                    pDataset_tile.variables["yv"][chunk_start:chunk_end, :] = chunk_yv
 
                 pDataset_tile.close()
 
@@ -637,12 +691,14 @@ def create_healpix_mesh(dResolution_meter_in,
 
                 pSRS = osr.SpatialReference()
                 pSRS.ImportFromEPSG(4326)
-                pLayer_tile = pDataset_tile.CreateLayer('healpix_mesh', srs=pSRS, geom_type=ogr.wkbPolygon)
-                pLayer_tile.CreateField(ogr.FieldDefn('cellid', ogr.OFTInteger))
-                pLayer_tile.CreateField(ogr.FieldDefn('lon', ogr.OFTReal))
-                pLayer_tile.CreateField(ogr.FieldDefn('lat', ogr.OFTReal))
-                pLayer_tile.CreateField(ogr.FieldDefn('area', ogr.OFTReal))
-                pLayer_tile.CreateField(ogr.FieldDefn('tile_index', ogr.OFTInteger))
+                pLayer_tile = pDataset_tile.CreateLayer(
+                    "healpix_mesh", srs=pSRS, geom_type=ogr.wkbPolygon
+                )
+                pLayer_tile.CreateField(ogr.FieldDefn("cellid", ogr.OFTInteger))
+                pLayer_tile.CreateField(ogr.FieldDefn("lon", ogr.OFTReal))
+                pLayer_tile.CreateField(ogr.FieldDefn("lat", ogr.OFTReal))
+                pLayer_tile.CreateField(ogr.FieldDefn("area", ogr.OFTReal))
+                pLayer_tile.CreateField(ogr.FieldDefn("tile_index", ogr.OFTInteger))
 
                 chunk_size = 1000
                 tile_n_cells = len(tile_pix_indices)
@@ -662,9 +718,13 @@ def create_healpix_mesh(dResolution_meter_in,
                         else:
                             lons = np.where(lons >= 180, lons - 360, lons)
 
-                        center_lon, center_lat = hp.pix2ang(nside, pix, nest=True, lonlat=True)
+                        center_lon, center_lat = hp.pix2ang(
+                            nside, pix, nest=True, lonlat=True
+                        )
                         # Convert center longitude from [0, 360] to [-180, 180]
-                        center_lon = center_lon - 360 if center_lon > 180 else center_lon
+                        center_lon = (
+                            center_lon - 360 if center_lon > 180 else center_lon
+                        )
 
                         ring = ogr.Geometry(ogr.wkbLinearRing)
                         for lon, lat in zip(lons, lats):
@@ -675,11 +735,13 @@ def create_healpix_mesh(dResolution_meter_in,
                         poly.AddGeometry(ring)
 
                         feature = ogr.Feature(pLayer_tile.GetLayerDefn())
-                        feature.SetField('cellid', int(tile_start + chunk_start + i + 1))
-                        feature.SetField('lon', float(center_lon))
-                        feature.SetField('lat', float(center_lat))
-                        feature.SetField('area', float(cell_area))
-                        feature.SetField('tile_index', iTile)
+                        feature.SetField(
+                            "cellid", int(tile_start + chunk_start + i + 1)
+                        )
+                        feature.SetField("lon", float(center_lon))
+                        feature.SetField("lat", float(center_lat))
+                        feature.SetField("area", float(cell_area))
+                        feature.SetField("tile_index", iTile)
                         feature.SetGeometry(poly)
                         pLayer_tile.CreateFeature(feature)
                         feature = None
@@ -692,9 +754,18 @@ def create_healpix_mesh(dResolution_meter_in,
         print(f"Successfully created {nTile} tile files")
         return tile_filenames
 
-def _create_healpix_mesh_with_advanced_tiles(iLevel, nside, pix_indices, sFilename_mesh,
-                                             sWorkspace_output, iFlag_netcdf, tile_mode,
-                                             zone_level, tiles_per_base):
+
+def _create_healpix_mesh_with_advanced_tiles(
+    iLevel,
+    nside,
+    pix_indices,
+    sFilename_mesh,
+    sWorkspace_output,
+    iFlag_netcdf,
+    tile_mode,
+    zone_level,
+    tiles_per_base,
+):
     """
     Internal function to create HEALPix mesh with advanced tiling.
 
@@ -705,7 +776,7 @@ def _create_healpix_mesh_with_advanced_tiles(iLevel, nside, pix_indices, sFilena
     n_cells = len(pix_indices)
 
     # Create tile structure based on mode
-    if tile_mode == 'zone':
+    if tile_mode == "zone":
         if zone_level is None:
             zone_level = max(0, iLevel - 11)  # Default: 8 levels coarser
 
@@ -729,27 +800,30 @@ def _create_healpix_mesh_with_advanced_tiles(iLevel, nside, pix_indices, sFilena
             sFilename_zone = f"{sFilename_base}_zone_{zone_id:05d}{sExtension}"
             sFilename_zone_full = os.path.join(sWorkspace_output, sFilename_zone)
 
-            print(f"  Zone {zone_id}: {len(zone_pix_array):,} pixels -> {sFilename_zone}")
+            print(
+                f"  Zone {zone_id}: {len(zone_pix_array):,} pixels -> {sFilename_zone}"
+            )
             _write_tile_file(sFilename_zone_full, zone_pix_array, nside, iFlag_netcdf)
             filenames.append(sFilename_zone)
 
         return {
-            'filenames': filenames,
-            'tile_structure': tile_structure,
-            'metadata': {
-                'level': iLevel,
-                'nside': nside,
-                'n_pixels': n_cells,
-                'tile_mode': 'zone',
-                'zone_level': zone_level,
-                'n_zones': len(zone_pixels)
-            }
+            "filenames": filenames,
+            "tile_structure": tile_structure,
+            "metadata": {
+                "level": iLevel,
+                "nside": nside,
+                "n_pixels": n_cells,
+                "tile_mode": "zone",
+                "zone_level": zone_level,
+                "n_zones": len(zone_pixels),
+            },
         }
 
     else:  # 'base' or 'hierarchical'
         print(f"Creating {tile_mode} tile structure...")
-        tile_structure = HEALPixTileStructure(iLevel, tile_scheme=tile_mode,
-                                              tiles_per_base=tiles_per_base)
+        tile_structure = HEALPixTileStructure(
+            iLevel, tile_scheme=tile_mode, tiles_per_base=tiles_per_base
+        )
 
         # Group pixels by tile
         tile_pixels = {}
@@ -768,38 +842,43 @@ def _create_healpix_mesh_with_advanced_tiles(iLevel, nside, pix_indices, sFilena
 
             # Get tile metadata for descriptive naming
             tile_meta = tile_structure.tile_metadata[tile_id]
-            base_pixel = tile_meta['base_pixel']
+            base_pixel = tile_meta["base_pixel"]
 
-            if tile_mode == 'base':
+            if tile_mode == "base":
                 # For base tiles: use base pixel number
                 sFilename_tile = f"{sFilename_base}_base_{base_pixel:02d}{sExtension}"
             else:  # hierarchical
                 # For hierarchical tiles: include base pixel and sub-index
-                sub_index = tile_meta.get('sub_index', 0)
+                sub_index = tile_meta.get("sub_index", 0)
                 sFilename_tile = f"{sFilename_base}_base_{base_pixel:02d}_sub_{sub_index:03d}{sExtension}"
 
             sFilename_tile_full = os.path.join(sWorkspace_output, sFilename_tile)
 
-            print(f"  Tile {tile_id}: base_{base_pixel:02d}, {len(tile_pix_array):,} pixels -> {sFilename_tile}")
+            print(
+                f"  Tile {tile_id}: base_{base_pixel:02d}, {len(tile_pix_array):,} pixels -> {sFilename_tile}"
+            )
             _write_tile_file(sFilename_tile_full, tile_pix_array, nside, iFlag_netcdf)
             filenames.append(sFilename_tile)
 
         # Save tile metadata
-        metadata_file = os.path.join(sWorkspace_output, f"{sFilename_base}_tile_metadata.json")
+        metadata_file = os.path.join(
+            sWorkspace_output, f"{sFilename_base}_tile_metadata.json"
+        )
         _save_tile_metadata(tile_structure, metadata_file)
 
         return {
-            'filenames': filenames,
-            'tile_structure': tile_structure,
-            'metadata': {
-                'level': iLevel,
-                'nside': nside,
-                'n_pixels': n_cells,
-                'tile_mode': tile_mode,
-                'n_tiles': len(tile_pixels),
-                'metadata_file': metadata_file
-            }
+            "filenames": filenames,
+            "tile_structure": tile_structure,
+            "metadata": {
+                "level": iLevel,
+                "nside": nside,
+                "n_pixels": n_cells,
+                "tile_mode": tile_mode,
+                "n_tiles": len(tile_pixels),
+                "metadata_file": metadata_file,
+            },
         }
+
 
 def _write_tile_file(filename, pix_indices, nside, iFlag_netcdf):
     """Write a single tile file."""
@@ -812,19 +891,20 @@ def _write_tile_file(filename, pix_indices, nside, iFlag_netcdf):
             pass
 
     n_cells = len(pix_indices)
-    cell_area = hp.nside2pixarea(nside, degrees=False) * (earth_radius ** 2)
+    cell_area = hp.nside2pixarea(nside, degrees=False) * (earth_radius**2)
 
     if iFlag_netcdf == 1:
         import netCDF4 as nc
-        pDataset = nc.Dataset(filename, 'w', format='NETCDF4')
-        pDataset.createDimension('cell', n_cells)
-        pDataset.createVariable('cellid', 'i4', ('cell',))
-        pDataset.createVariable('lon', 'f4', ('cell',))
-        pDataset.createVariable('lat', 'f4', ('cell',))
-        pDataset.createVariable('area', 'f8', ('cell',))
-        pDataset.createDimension('nv', 4)
-        pDataset.createVariable('xv', 'f4', ('cell', 'nv'))
-        pDataset.createVariable('yv', 'f4', ('cell', 'nv'))
+
+        pDataset = nc.Dataset(filename, "w", format="NETCDF4")
+        pDataset.createDimension("cell", n_cells)
+        pDataset.createVariable("cellid", "i4", ("cell",))
+        pDataset.createVariable("lon", "f4", ("cell",))
+        pDataset.createVariable("lat", "f4", ("cell",))
+        pDataset.createVariable("area", "f8", ("cell",))
+        pDataset.createDimension("nv", 4)
+        pDataset.createVariable("xv", "f4", ("cell", "nv"))
+        pDataset.createVariable("yv", "f4", ("cell", "nv"))
 
         # Write data in chunks
         chunk_size = 10000
@@ -855,12 +935,12 @@ def _write_tile_file(filename, pix_indices, nside, iFlag_netcdf):
                 chunk_xv[i, :] = lons
                 chunk_yv[i, :] = lats
 
-            pDataset.variables['cellid'][chunk_start:chunk_end] = chunk_cellids
-            pDataset.variables['lon'][chunk_start:chunk_end] = chunk_lons
-            pDataset.variables['lat'][chunk_start:chunk_end] = chunk_lats
-            pDataset.variables['area'][chunk_start:chunk_end] = cell_area
-            pDataset.variables['xv'][chunk_start:chunk_end, :] = chunk_xv
-            pDataset.variables['yv'][chunk_start:chunk_end, :] = chunk_yv
+            pDataset.variables["cellid"][chunk_start:chunk_end] = chunk_cellids
+            pDataset.variables["lon"][chunk_start:chunk_end] = chunk_lons
+            pDataset.variables["lat"][chunk_start:chunk_end] = chunk_lats
+            pDataset.variables["area"][chunk_start:chunk_end] = cell_area
+            pDataset.variables["xv"][chunk_start:chunk_end, :] = chunk_xv
+            pDataset.variables["yv"][chunk_start:chunk_end, :] = chunk_yv
 
         pDataset.close()
     else:
@@ -870,11 +950,13 @@ def _write_tile_file(filename, pix_indices, nside, iFlag_netcdf):
 
         pSRS = osr.SpatialReference()
         pSRS.ImportFromEPSG(4326)
-        pLayer = pDataset.CreateLayer('healpix_mesh', srs=pSRS, geom_type=ogr.wkbPolygon)
-        pLayer.CreateField(ogr.FieldDefn('cellid', ogr.OFTInteger))
-        pLayer.CreateField(ogr.FieldDefn('lon', ogr.OFTReal))
-        pLayer.CreateField(ogr.FieldDefn('lat', ogr.OFTReal))
-        pLayer.CreateField(ogr.FieldDefn('area', ogr.OFTReal))
+        pLayer = pDataset.CreateLayer(
+            "healpix_mesh", srs=pSRS, geom_type=ogr.wkbPolygon
+        )
+        pLayer.CreateField(ogr.FieldDefn("cellid", ogr.OFTInteger))
+        pLayer.CreateField(ogr.FieldDefn("lon", ogr.OFTReal))
+        pLayer.CreateField(ogr.FieldDefn("lat", ogr.OFTReal))
+        pLayer.CreateField(ogr.FieldDefn("area", ogr.OFTReal))
 
         chunk_size = 1000
         for chunk_start in range(0, n_cells, chunk_size):
@@ -903,10 +985,10 @@ def _write_tile_file(filename, pix_indices, nside, iFlag_netcdf):
                 poly.AddGeometry(ring)
 
                 feature = ogr.Feature(pLayer.GetLayerDefn())
-                feature.SetField('cellid', int(pix + 1))
-                feature.SetField('lon', float(center_lon))
-                feature.SetField('lat', float(center_lat))
-                feature.SetField('area', float(cell_area))
+                feature.SetField("cellid", int(pix + 1))
+                feature.SetField("lon", float(center_lon))
+                feature.SetField("lat", float(center_lat))
+                feature.SetField("area", float(cell_area))
                 feature.SetGeometry(poly)
                 pLayer.CreateFeature(feature)
                 feature = None
@@ -916,34 +998,35 @@ def _write_tile_file(filename, pix_indices, nside, iFlag_netcdf):
         pDataset.FlushCache()
         pDataset = None
 
+
 def _save_tile_metadata(tile_structure, filename):
     """Save tile metadata to JSON file."""
     metadata_json = {
-        'structure_info': {
-            'level': tile_structure.level,
-            'nside': tile_structure.nside,
-            'npix': tile_structure.npix,
-            'tile_scheme': tile_structure.tile_scheme,
-            'total_tiles': tile_structure.total_tiles,
-            'tiles_per_base': tile_structure.tiles_per_base
+        "structure_info": {
+            "level": tile_structure.level,
+            "nside": tile_structure.nside,
+            "npix": tile_structure.npix,
+            "tile_scheme": tile_structure.tile_scheme,
+            "total_tiles": tile_structure.total_tiles,
+            "tiles_per_base": tile_structure.tiles_per_base,
         },
-        'tiles': {}
+        "tiles": {},
     }
 
     for tile_id, meta in tile_structure.tile_metadata.items():
         tile_meta_json = {}
         for key, value in meta.items():
             if isinstance(value, (np.integer, np.floating)):
-                tile_meta_json[key] = int(value) if isinstance(value, np.integer) else float(value)
+                tile_meta_json[key] = (
+                    int(value) if isinstance(value, np.integer) else float(value)
+                )
             elif isinstance(value, tuple):
                 tile_meta_json[key] = list(value)
             else:
                 tile_meta_json[key] = value
-        metadata_json['tiles'][str(tile_id)] = tile_meta_json
+        metadata_json["tiles"][str(tile_id)] = tile_meta_json
 
-    with open(filename, 'w') as f:
+    with open(filename, "w") as f:
         json.dump(metadata_json, f, indent=2)
 
     print(f"Tile metadata saved to: {filename}")
-
-

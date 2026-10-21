@@ -1,13 +1,12 @@
-import numpy as np
 import numpy
+import numpy as np
 import xarray
-from scipy.spatial import distance
+from jigsawpy import jigsaw_msh_t
+from mpas_tools.mesh.creation.util import circumcenter, lonlat2xyz
+from netCDF4 import Dataset as NetCDFFile
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import connected_components
-from jigsawpy import jigsaw_msh_t
-from netCDF4 import Dataset as NetCDFFile
-from mpas_tools.mesh.creation.util import lonlat2xyz
-from mpas_tools.mesh.creation.util import circumcenter
+from scipy.spatial import distance
 
 
 def subtract_critical_passages(dsMask, dsPassages):
@@ -93,8 +92,8 @@ def mask_reachable_ocean(dsMesh, dsMask, fcSeed):
 
         iPtrs[iCell + 1] = iNext
 
-    xData.resize((iPtrs[nCells]))
-    iCols.resize((iPtrs[nCells]))
+    xData.resize(iPtrs[nCells])
+    iCols.resize(iPtrs[nCells])
 
     spMesh = csr_matrix((xData, iCols, iPtrs), dtype=int)
 

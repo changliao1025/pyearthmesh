@@ -1,8 +1,10 @@
 import os
+
 import numpy as np
 from osgeo import ogr, osr
-from pyearthmesh.utility.convert_coordinates import convert_gcs_coordinates_to_meshcell
 from pyearth.gis.spatialref.reproject_coordinates import reproject_coordinates_batch
+
+from pyearthmesh.utility.convert_coordinates import convert_gcs_coordinates_to_meshcell
 
 
 def create_triangular_mesh(

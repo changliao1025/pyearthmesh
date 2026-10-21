@@ -1,12 +1,13 @@
-import os
 import importlib.util
+import os
+
 import numpy as np
-from osgeo import ogr, osr, gdal
+from osgeo import gdal, ogr, osr
 from pyearth.gis.location.convert_between_longitude_latitude_and_sphere_3d import (
     convert_sphere_3d_to_longitude_latitude,
 )
-from pyearthmesh.utility.convert_coordinates import convert_gcs_coordinates_to_meshcell
 
+from pyearthmesh.utility.convert_coordinates import convert_gcs_coordinates_to_meshcell
 
 
 def update_vertices_on_cell(nCell, nVertex, cellsOnVertex):

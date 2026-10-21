@@ -1,6 +1,6 @@
 # Generating MPAS Meshes with PyEarthMesh
 
-This user manual walks through generating Model for Prediction Across Scales (MPAS) meshes using **PyEarthMesh**. 
+This user manual walks through generating Model for Prediction Across Scales (MPAS) meshes using **PyEarthMesh**.
 
 PyEarthMesh provides a modern, configuration-driven two-tier architecture that automates mesh sizing, feature conditioning (rivers, coastlines, lakes), JIGSAW execution, and Voronoi dual-mesh generation.
 
@@ -263,7 +263,7 @@ gdf.boundary.plot()
 
 ## 7. HPC / SLURM Execution
 
-For high-resolution regional or global meshes, mesh generation can take significant CPU memory and runtime. 
+For high-resolution regional or global meshes, mesh generation can take significant CPU memory and runtime.
 
 Set `"run_on_hpc": true` in `workflow_config.json`:
 

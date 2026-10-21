@@ -3,7 +3,7 @@
 > **Status: COMPLETED (ARCHIVED)**
 > - **Implemented in:** [`create_coastline_buffer`](../../pyearthmesh/utility/create_coastline_buffer.py) with `iFlag_simplify_in=1`.
 > - **Underlying helper:** `create_buffer_zone_polygon_file(..., iFlag_simplify=...)` via `pyearthbuffer`.
-> - **Commit:** `0282412` (*enhence buffer*).
+> - **Commit:** `0282412` (*enhance buffer*).
 
 ## Problem Statement
 

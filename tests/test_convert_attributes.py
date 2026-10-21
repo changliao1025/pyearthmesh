@@ -1,34 +1,38 @@
 import numpy as np
 import pytest
 
-from pyearthmesh.classes.mpas import pympas
 from pyearthmesh.classes.meshcell import pymeshcell
+from pyearthmesh.classes.mpas import pympas
 from pyearthmesh.utility.convert_attributes import (
-    convert_gcs_attributes_to_meshcell,
     convert_gcs_attributes_to_cell,
+    convert_gcs_attributes_to_meshcell,
 )
 
 
 def test_convert_gcs_attributes_to_meshcell_mpas():
     # 6-vertex hexagon cell (unclosed, shape (6, 2))
-    coords = np.array([
-        [100.0, 35.0],
-        [101.0, 35.0],
-        [101.5, 36.0],
-        [101.0, 37.0],
-        [100.0, 37.0],
-        [99.5, 36.0],
-    ])
+    coords = np.array(
+        [
+            [100.0, 35.0],
+            [101.0, 35.0],
+            [101.5, 36.0],
+            [101.0, 37.0],
+            [100.0, 37.0],
+            [99.5, 36.0],
+        ]
+    )
     vertex_ids = np.array([10, 11, 12, 13, 14, 15])
     edge_ids = np.array([101, 102, 103, 104, 105, 106])
-    vertex_on_edge = np.array([
-        [10, 11],
-        [11, 12],
-        [12, 13],
-        [13, 14],
-        [14, 15],
-        [15, 10],
-    ])
+    vertex_on_edge = np.array(
+        [
+            [10, 11],
+            [11, 12],
+            [12, 13],
+            [13, 14],
+            [14, 15],
+            [15, 10],
+        ]
+    )
 
     cell = convert_gcs_attributes_to_meshcell(
         4,
@@ -65,18 +69,22 @@ def test_convert_gcs_attributes_to_meshcell_mpas():
 
 def test_convert_gcs_attributes_to_meshcell_mpas_triangle():
     # 3-vertex triangle cell
-    coords = np.array([
-        [100.0, 35.0],
-        [101.0, 35.0],
-        [100.5, 36.0],
-    ])
+    coords = np.array(
+        [
+            [100.0, 35.0],
+            [101.0, 35.0],
+            [100.5, 36.0],
+        ]
+    )
     vertex_ids = np.array([1, 2, 3])
     edge_ids = np.array([10, 20, 30])
-    vertex_on_edge = np.array([
-        [1, 2],
-        [2, 3],
-        [3, 1],
-    ])
+    vertex_on_edge = np.array(
+        [
+            [1, 2],
+            [2, 3],
+            [3, 1],
+        ]
+    )
 
     cell = convert_gcs_attributes_to_meshcell(
         4,
@@ -99,12 +107,14 @@ def test_convert_gcs_attributes_to_meshcell_alias():
 
 
 def test_convert_gcs_attributes_to_meshcell_legacy_5_arg():
-    coords = np.array([
-        [100.0, 35.0],
-        [101.0, 35.0],
-        [101.5, 36.0],
-        [100.5, 36.0],
-    ])
+    coords = np.array(
+        [
+            [100.0, 35.0],
+            [101.0, 35.0],
+            [101.5, 36.0],
+            [100.5, 36.0],
+        ]
+    )
     vertex_ids = np.array([1, 2, 3, 4])
     edge_ids = np.array([10, 20, 30, 40])
 
@@ -118,4 +128,3 @@ def test_convert_gcs_attributes_to_meshcell_legacy_5_arg():
     assert cell is not None
     assert cell.nVertex == 4
     assert cell.nEdge == 4
-

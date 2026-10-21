@@ -1,12 +1,15 @@
-import os, sys
-from osgeo import ogr, _osr, gdal
+import os
 import shutil
+import sys
 from concurrent.futures import ProcessPoolExecutor
+
+from osgeo import _osr, gdal, ogr
 from pyearth.gis.gdal.gdal_vector_format_support import get_vector_driver_from_filename
 from rtree import index
 
 # Progress logging interval for large mesh loops.
 PROGRESS_INTERVAL = 100000
+
 
 def _build_coastline_rtree(sFilename_coastline, aExtent_mesh=None):
     """
@@ -27,11 +30,11 @@ def _build_coastline_rtree(sFilename_coastline, aExtent_mesh=None):
     """
     pDataset_coastline = ogr.Open(sFilename_coastline, 0)
     if pDataset_coastline is None:
-        raise ValueError('Cannot open coastline file: ' + sFilename_coastline)
+        raise ValueError("Cannot open coastline file: " + sFilename_coastline)
 
     pLayer_coastline = pDataset_coastline.GetLayer(0)
 
-    print('Building R-tree spatial index for coastline polygons...', flush=True)
+    print("Building R-tree spatial index for coastline polygons...", flush=True)
     rtree_idx = index.Index()
     aCoastline_geometries = {}
 
@@ -40,18 +43,23 @@ def _build_coastline_rtree(sFilename_coastline, aExtent_mesh=None):
         if min_x <= max_x and min_y <= max_y:
             pLayer_coastline.SetSpatialFilterRect(min_x, min_y, max_x, max_y)
             print(
-                f'Applying coastline spatial filter to tile extent: ({min_x}, {min_y}, {max_x}, {max_y})',
+                f"Applying coastline spatial filter to tile extent: ({min_x}, {min_y}, {max_x}, {max_y})",
                 flush=True,
             )
         else:
-            print('Skipping coastline spatial filter because mesh extent is invalid', flush=True)
+            print(
+                "Skipping coastline spatial filter because mesh extent is invalid",
+                flush=True,
+            )
 
     pLayer_coastline.ResetReading()
     for idx, pFeature_coastline in enumerate(pLayer_coastline):
         pGeometry_coastline = pFeature_coastline.GetGeometryRef()
         if pGeometry_coastline is not None:
             # Get bounding box of coastline geometry
-            envelope = pGeometry_coastline.GetEnvelope()  # returns (minX, maxX, minY, maxY)
+            envelope = (
+                pGeometry_coastline.GetEnvelope()
+            )  # returns (minX, maxX, minY, maxY)
             # Insert into R-tree with bbox (minX, minY, maxX, maxY)
             rtree_idx.insert(idx, (envelope[0], envelope[2], envelope[1], envelope[3]))
             # Store geometry - convert to WKT for parallel processing to avoid pickling issues
@@ -61,19 +69,24 @@ def _build_coastline_rtree(sFilename_coastline, aExtent_mesh=None):
 
     pDataset_coastline = None
 
-    print(f'R-tree index built with {len(aCoastline_geometries)} coastline polygons', flush=True)
+    print(
+        f"R-tree index built with {len(aCoastline_geometries)} coastline polygons",
+        flush=True,
+    )
     return rtree_idx, aCoastline_geometries
 
-def extract_land_meshcells(sFilename_mesh_in,
-                           sFilename_coastline,
-                           sFilename_mesh_out,
-                           sFilename_mesh_touch_out=None,
-                           iFlag_multi_tile=0,
-                           sExtension_in=None,
-                           sExtension_out=None,
-                           iFlag_parallel=0,
-                           nWorker_in=None
-                           ):
+
+def extract_land_meshcells(
+    sFilename_mesh_in,
+    sFilename_coastline,
+    sFilename_mesh_out,
+    sFilename_mesh_touch_out=None,
+    iFlag_multi_tile=0,
+    sExtension_in=None,
+    sExtension_out=None,
+    iFlag_parallel=0,
+    nWorker_in=None,
+):
     """
     Extract land mesh cells from mesh file(s) using coastline data.
 
@@ -121,7 +134,7 @@ def extract_land_meshcells(sFilename_mesh_in,
             sExtension_out=sExtension_out,
             bExtract_touch_in=(sFilename_mesh_touch_out is not None),
             iFlag_parallel=iFlag_parallel,
-            nWorker_in=nWorker_in
+            nWorker_in=nWorker_in,
         )
 
     # Single-file mode (original implementation)
@@ -129,13 +142,16 @@ def extract_land_meshcells(sFilename_mesh_in,
         sFilename_mesh=sFilename_mesh_in,
         sFilename_coastline=sFilename_coastline,
         sFilename_mesh_land_out=sFilename_mesh_out,
-        sFilename_mesh_touch_out=sFilename_mesh_touch_out
+        sFilename_mesh_touch_out=sFilename_mesh_touch_out,
     )
 
-def _extract_land_meshcells_single_file(sFilename_mesh,
-                                        sFilename_coastline,
-                                        sFilename_mesh_land_out,
-                                        sFilename_mesh_touch_out=None   ):
+
+def _extract_land_meshcells_single_file(
+    sFilename_mesh,
+    sFilename_coastline,
+    sFilename_mesh_land_out,
+    sFilename_mesh_touch_out=None,
+):
     """
     Internal function: Extract land mesh cells from a single mesh file.
 
@@ -157,16 +173,18 @@ def _extract_land_meshcells_single_file(sFilename_mesh,
     """
     pDriver_out = get_vector_driver_from_filename(sFilename_mesh_land_out)
     if pDriver_out is None:
-        raise ValueError('Cannot get driver for output file: ' + sFilename_mesh_land_out)
+        raise ValueError(
+            "Cannot get driver for output file: " + sFilename_mesh_land_out
+        )
 
-    #delete output file if it already exists
+    # delete output file if it already exists
     if os.path.exists(sFilename_mesh_land_out):
         os.remove(sFilename_mesh_land_out)
 
     # Create output datasource for all land cells
     pDataset_out = pDriver_out.CreateDataSource(sFilename_mesh_land_out)
     if pDataset_out is None:
-        raise ValueError('Cannot create output file: ' + sFilename_mesh_land_out)
+        raise ValueError("Cannot create output file: " + sFilename_mesh_land_out)
 
     # Create optional output datasource for touch-only cells
     pDataset_touch_out = None
@@ -174,17 +192,23 @@ def _extract_land_meshcells_single_file(sFilename_mesh,
     if sFilename_mesh_touch_out is not None:
         pDriver_touch_out = get_vector_driver_from_filename(sFilename_mesh_touch_out)
         if pDriver_touch_out is None:
-            raise ValueError('Cannot get driver for touch output file: ' + sFilename_mesh_touch_out)
+            raise ValueError(
+                "Cannot get driver for touch output file: " + sFilename_mesh_touch_out
+            )
         if os.path.exists(sFilename_mesh_touch_out):
             os.remove(sFilename_mesh_touch_out)
-        pDataset_touch_out = pDriver_touch_out.CreateDataSource(sFilename_mesh_touch_out)
+        pDataset_touch_out = pDriver_touch_out.CreateDataSource(
+            sFilename_mesh_touch_out
+        )
         if pDataset_touch_out is None:
-            raise ValueError('Cannot create touch output file: ' + sFilename_mesh_touch_out)
+            raise ValueError(
+                "Cannot create touch output file: " + sFilename_mesh_touch_out
+            )
 
-    #read the mesh
+    # read the mesh
     pDataset_mesh = ogr.Open(sFilename_mesh, 0)
     if pDataset_mesh is None:
-        raise ValueError('Cannot open mesh file: ' + sFilename_mesh)
+        raise ValueError("Cannot open mesh file: " + sFilename_mesh)
 
     # Get layers
     pLayer_mesh = pDataset_mesh.GetLayer(0)
@@ -195,9 +219,9 @@ def _extract_land_meshcells_single_file(sFilename_mesh,
     pLayerDefn_mesh = pLayer_mesh.GetLayerDefn()
 
     # Create output layer with same schema as input mesh
-    pLayer_out = pDataset_out.CreateLayer('mesh_land', pSpatialRef, ogr.wkbPolygon)
+    pLayer_out = pDataset_out.CreateLayer("mesh_land", pSpatialRef, ogr.wkbPolygon)
     if pLayer_out is None:
-        raise ValueError('Cannot create output layer')
+        raise ValueError("Cannot create output layer")
 
     # Copy field definitions from mesh layer
     for i in range(pLayerDefn_mesh.GetFieldCount()):
@@ -207,16 +231,20 @@ def _extract_land_meshcells_single_file(sFilename_mesh,
     # Create optional touch-only output layer
     pLayer_touch_out = None
     if pDataset_touch_out is not None:
-        pLayer_touch_out = pDataset_touch_out.CreateLayer('mesh_touch', pSpatialRef, ogr.wkbPolygon)
+        pLayer_touch_out = pDataset_touch_out.CreateLayer(
+            "mesh_touch", pSpatialRef, ogr.wkbPolygon
+        )
         if pLayer_touch_out is None:
-            raise ValueError('Cannot create touch output layer')
+            raise ValueError("Cannot create touch output layer")
         # Copy field definitions
         for i in range(pLayerDefn_mesh.GetFieldCount()):
             pFieldDefn = pLayerDefn_mesh.GetFieldDefn(i)
             pLayer_touch_out.CreateField(pFieldDefn)
 
     # Build R-tree spatial index if not provided
-    rtree_idx, aCoastline_geometries = _build_coastline_rtree(sFilename_coastline, aExtent_mesh)
+    rtree_idx, aCoastline_geometries = _build_coastline_rtree(
+        sFilename_coastline, aExtent_mesh
+    )
 
     # Loop through all mesh cells
     pLayer_mesh.ResetReading()
@@ -226,7 +254,7 @@ def _extract_land_meshcells_single_file(sFilename_mesh,
 
     for i, pFeature_mesh in enumerate(pLayer_mesh):
         if i % PROGRESS_INTERVAL == 0:
-            print(f'Processing mesh cell {i}/{nTotal}...')
+            print(f"Processing mesh cell {i}/{nTotal}...")
 
         pGeometry_mesh = pFeature_mesh.GetGeometryRef()
         if pGeometry_mesh is None:
@@ -255,7 +283,12 @@ def _extract_land_meshcells_single_file(sFilename_mesh,
         for pGeom_part in aGeometry_parts:
             # Get bounding box of mesh cell part
             envelope_mesh = pGeom_part.GetEnvelope()  # (minX, maxX, minY, maxY)
-            bbox_mesh = (envelope_mesh[0], envelope_mesh[2], envelope_mesh[1], envelope_mesh[3])
+            bbox_mesh = (
+                envelope_mesh[0],
+                envelope_mesh[2],
+                envelope_mesh[1],
+                envelope_mesh[3],
+            )
 
             # Use R-tree to find candidate coastline polygons that intersect the bbox
             candidate_indices = list(rtree_idx.intersection(bbox_mesh))
@@ -321,9 +354,15 @@ def _extract_land_meshcells_single_file(sFilename_mesh,
                 pFeature_touch_out = None
                 nTouch += 1
 
-    print(f'Saved {nSaved} mesh cells out of {nTotal} total cells that touch or are within coastlines', flush=True)
+    print(
+        f"Saved {nSaved} mesh cells out of {nTotal} total cells that touch or are within coastlines",
+        flush=True,
+    )
     if pLayer_touch_out is not None:
-        print(f'Saved {nTouch} mesh cells that only touch coastlines (excluding within)', flush=True)
+        print(
+            f"Saved {nTouch} mesh cells that only touch coastlines (excluding within)",
+            flush=True,
+        )
 
     # Cleanup
     pDataset_mesh = None
@@ -334,20 +373,29 @@ def _extract_land_meshcells_single_file(sFilename_mesh,
 
     return nSaved
 
+
 def _extract_single_tile_worker(task):
     """Internal worker function: Extract land mesh cells for a single tile file.
 
     Each worker builds its own R-tree from the coastline file to avoid pickling issues.
     """
-    sFile_mesh_in, sFilename_coastline, sWorkspace_out, sExtension_out, bExtract_touch = task
+    (
+        sFile_mesh_in,
+        sFilename_coastline,
+        sWorkspace_out,
+        sExtension_out,
+        bExtract_touch,
+    ) = task
 
     # Generate output filenames
     sBasename = os.path.splitext(os.path.basename(sFile_mesh_in))[0]
-    sFile_land_out = os.path.join(sWorkspace_out, sBasename + '_land' + sExtension_out)
+    sFile_land_out = os.path.join(sWorkspace_out, sBasename + "_land" + sExtension_out)
 
     sFile_touch_out = None
     if bExtract_touch:
-        sFile_touch_out = os.path.join(sWorkspace_out, sBasename + '_touch' + sExtension_out)
+        sFile_touch_out = os.path.join(
+            sWorkspace_out, sBasename + "_touch" + sExtension_out
+        )
 
     print(f"Extracting land mesh cells from: {sFile_mesh_in}", flush=True)
     print(f"  Output land file: {sFile_land_out}", flush=True)
@@ -357,23 +405,23 @@ def _extract_single_tile_worker(task):
     # Call the single-file extraction function
     # R-tree will be built internally since we don't pass it
     nSaved = _extract_land_meshcells_single_file(
-        sFile_mesh_in,
-        sFilename_coastline,
-        sFile_land_out,
-        sFile_touch_out
+        sFile_mesh_in, sFilename_coastline, sFile_land_out, sFile_touch_out
     )
 
     print(f"Completed extraction for {sFile_mesh_in}: {nSaved} cells saved", flush=True)
     return sFile_land_out
 
-def _extract_land_meshcells_multi_tile_impl(sWorkspace_in,
-                                             sWorkspace_out,
-                                             sExtension_in,
-                                             sFilename_coastline,
-                                             sExtension_out=None,
-                                             bExtract_touch_in=False,
-                                             iFlag_parallel=0,
-                                             nWorker_in=None):
+
+def _extract_land_meshcells_multi_tile_impl(
+    sWorkspace_in,
+    sWorkspace_out,
+    sExtension_in,
+    sFilename_coastline,
+    sExtension_out=None,
+    bExtract_touch_in=False,
+    iFlag_parallel=0,
+    nWorker_in=None,
+):
     """
     Internal implementation: Extract land mesh cells from multiple tile files in a workspace.
 
@@ -436,13 +484,20 @@ def _extract_land_meshcells_multi_tile_impl(sWorkspace_in,
         # Sort files to ensure consistent processing order
         files.sort()
         # Exclude files that have '_land' or '_touch' in the name to avoid re-processing
-        files = [f for f in files if '_land' not in f and '_touch' not in f]
+        files = [f for f in files if "_land" not in f and "_touch" not in f]
         for file in files:
             if file.endswith(sExtension_in):
                 sFile_in = os.path.join(root, file)
                 # Each worker will build its own R-tree to avoid pickling issues
-                aTask.append((sFile_in, sFilename_coastline, sWorkspace_out, sExtension_out,
-                             bExtract_touch_in))
+                aTask.append(
+                    (
+                        sFile_in,
+                        sFilename_coastline,
+                        sWorkspace_out,
+                        sExtension_out,
+                        bExtract_touch_in,
+                    )
+                )
 
     nFile = len(aTask)
     print(f"Found {nFile} matching files in the input workspace: {sWorkspace_in}")
@@ -453,13 +508,17 @@ def _extract_land_meshcells_multi_tile_impl(sWorkspace_in,
 
     # Process files either in parallel or sequentially
     if iFlag_parallel and nFile > 1:
-        print(f"Processing {nFile} files in parallel with {nWorker_in or 'default'} workers...")
+        print(
+            f"Processing {nFile} files in parallel with {nWorker_in or 'default'} workers..."
+        )
         print("Note: Each worker builds its own R-tree index from the coastline file.")
         print("This adds overhead but avoids GDAL/OGR multiprocessing issues.")
         # Use chunksize=1 to ensure proper distribution of work across workers
         # GDAL/OGR has global state issues, so we process one file at a time per worker
         with ProcessPoolExecutor(max_workers=nWorker_in) as executor:
-            results = list(executor.map(_extract_single_tile_worker, aTask, chunksize=1))
+            results = list(
+                executor.map(_extract_single_tile_worker, aTask, chunksize=1)
+            )
         print(f"Processed {len(results)} files successfully.")
     else:
         print(f"Processing {nFile} files sequentially...")
@@ -467,17 +526,22 @@ def _extract_land_meshcells_multi_tile_impl(sWorkspace_in,
             _extract_single_tile_worker(task)
 
     print("=" * 80)
-    print("Land mesh cell extraction completed for all matching files in the workspace.")
+    print(
+        "Land mesh cell extraction completed for all matching files in the workspace."
+    )
     print("=" * 80)
 
-def extract_land_meshcells_multi_tile(sWorkspace_in,
-                                       sWorkspace_out,
-                                       sExtension_in,
-                                       sFilename_coastline,
-                                       sExtension_out=None,
-                                       bExtract_touch_in=False,
-                                       iFlag_parallel=0,
-                                       nWorker_in=None):
+
+def extract_land_meshcells_multi_tile(
+    sWorkspace_in,
+    sWorkspace_out,
+    sExtension_in,
+    sFilename_coastline,
+    sExtension_out=None,
+    bExtract_touch_in=False,
+    iFlag_parallel=0,
+    nWorker_in=None,
+):
     """
     DEPRECATED: Use extract_land_meshcells() with iFlag_multi_tile=1 instead.
 
@@ -511,10 +575,10 @@ def extract_land_meshcells_multi_tile(sWorkspace_in,
         sFilename_mesh_in=sWorkspace_in,
         sFilename_coastline=sFilename_coastline,
         sFilename_mesh_out=sWorkspace_out,
-        sFilename_mesh_touch_out='_touch_' if bExtract_touch_in else None,
+        sFilename_mesh_touch_out="_touch_" if bExtract_touch_in else None,
         iFlag_multi_tile=1,
         sExtension_in=sExtension_in,
         sExtension_out=sExtension_out,
         iFlag_parallel=iFlag_parallel,
-        nWorker_in=nWorker_in
+        nWorker_in=nWorker_in,
     )

@@ -1,13 +1,16 @@
+import os
 import shutil
-import os, sys
+import sys
 from concurrent.futures import ProcessPoolExecutor
+
 from pyearth.toolbox.conversion.convert_vector_format import convert_vector_format
+
 from pyearthmesh.utility.mesh_utility import check_mesh_quality
 
 
 def _check_single_mesh_quality(task):
     """Run quality check for one mesh file and write output file."""
-    sFile_in, sWorkspace_out, sExtension_out , iFlag_drop_idl_crossing_cells = task
+    sFile_in, sWorkspace_out, sExtension_out, iFlag_drop_idl_crossing_cells = task
     sFile_out = os.path.join(
         sWorkspace_out,
         os.path.splitext(os.path.basename(sFile_in))[0] + sExtension_out,
@@ -18,7 +21,11 @@ def _check_single_mesh_quality(task):
         os.remove(sFile_out)
 
     print("check mesh quality: " + sFile_in + " to " + sFile_out)
-    sFilename_mesh_new = check_mesh_quality(sFile_in, iFlag_verbose_in=1, iFlag_drop_idl_crossing_cells_in=iFlag_drop_idl_crossing_cells)
+    sFilename_mesh_new = check_mesh_quality(
+        sFile_in,
+        iFlag_verbose_in=1,
+        iFlag_drop_idl_crossing_cells_in=iFlag_drop_idl_crossing_cells,
+    )
     print("check mesh quality completed: " + sFilename_mesh_new)
 
     if sFilename_mesh_new == sFile_in:
@@ -41,15 +48,15 @@ def check_mesh_quality_multi_tile(
     iParallel_in=0,
     nWorker_in=None,
 ):
-    #check existance of the input workspace
+    # check existence of the input workspace
     if not os.path.exists(sWorkspace_in):
         print("The input workspace does not exist: " + sWorkspace_in)
         sys.exit(1)
-    #create the output workspace if not exist
+    # create the output workspace if not exist
     if not os.path.exists(sWorkspace_out):
         os.makedirs(sWorkspace_out)
 
-    #find all the matching files in the input workspace
+    # find all the matching files in the input workspace
     sWorkspace_in_abs = os.path.abspath(sWorkspace_in)
     sWorkspace_out_abs = os.path.abspath(sWorkspace_out)
 
@@ -66,21 +73,28 @@ def check_mesh_quality_multi_tile(
         if os.path.abspath(root).startswith(sWorkspace_out_abs):
             continue
 
-        #sort files to ensure consistent processing order
+        # sort files to ensure consistent processing order
         files.sort()
-        #exclude files that has '_fixed' in the name to avoid re-processing already fixed meshes
-        files = [f for f in files if '_fixed' not in f]
+        # exclude files that has '_fixed' in the name to avoid re-processing already fixed meshes
+        files = [f for f in files if "_fixed" not in f]
         for file in files:
             if file.endswith(sExtension_in):
                 sFile_in = os.path.join(root, file)
-                #if '_01' not in sFile_in:
+                # if '_01' not in sFile_in:
                 #    continue
-                if '06' in sFile_in:
-                    #all ocean cell, so we dont need to worry about IDL crossing cells
+                if "06" in sFile_in:
+                    # all ocean cell, so we dont need to worry about IDL crossing cells
                     iFlag_drop_idl_crossing_cells_in = True
                 else:
                     iFlag_drop_idl_crossing_cells_in = False
-                aTask.append((sFile_in, sWorkspace_out, sExtension_out, iFlag_drop_idl_crossing_cells_in))
+                aTask.append(
+                    (
+                        sFile_in,
+                        sWorkspace_out,
+                        sExtension_out,
+                        iFlag_drop_idl_crossing_cells_in,
+                    )
+                )
 
         # top-level already processed; stop walking
         break

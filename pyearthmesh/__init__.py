@@ -12,17 +12,18 @@ __version__ = "0.1.0"
 __author__ = "Chang Liao"
 __email__ = "changliao.climate@gmail.com"
 
-# Import main classes
-from pyearthmesh.classes.vertex import pyvertex
+from pyearthmesh.classes.dggrid import pydggrid
 from pyearthmesh.classes.edge import pyedge
-from pyearthmesh.classes.meshcell import pymeshcell
 from pyearthmesh.classes.hexagon import pyhexagon
-from pyearthmesh.classes.square import pysquare
 from pyearthmesh.classes.latlon import pylatlon
 from pyearthmesh.classes.link import pycelllink
+from pyearthmesh.classes.meshcell import pymeshcell
 from pyearthmesh.classes.mpas import pympas
+from pyearthmesh.classes.square import pysquare
 from pyearthmesh.classes.tin import pytin
-from pyearthmesh.classes.dggrid import pydggrid
+
+# Import main classes
+from pyearthmesh.classes.vertex import pyvertex
 
 __all__ = [
     "pyvertex",
@@ -36,4 +37,3 @@ __all__ = [
     "pytin",
     "pydggrid",
 ]
-

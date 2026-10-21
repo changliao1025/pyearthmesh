@@ -1,7 +1,6 @@
-import numpy as np
-from scipy import spatial
-from scipy import interpolate
 import jigsawpy
+import numpy as np
+from scipy import interpolate, spatial
 
 from pyearthmesh.meshes.unstructured.jigsaw.utility import zipmesh
 
