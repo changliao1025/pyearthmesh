@@ -6,13 +6,12 @@ import copy
 import time
 import numpy as np
 from osgeo import gdal
-import jigsawpy
 from pyearth.gis.gdal.read.raster.gdal_read_geotiff_file import gdal_read_geotiff_file
 
-import mpas_tools.mesh.creation.mesh_definition_tools as mdt
 from pyearthmesh.meshes.unstructured.jigsaw.inpoly2 import inpoly2
 from pyearthmesh.meshes.unstructured.jigsaw.loadgeo import loadgeo
 from pyearthmesh.meshes.unstructured.jigsaw.utility import addpoint, addline, addpoly, innerto
+
 
 
 def compute_mask(
@@ -150,6 +149,8 @@ def run_jigsaw(
 
     """
     # Authors: Darren Engwirda
+    import jigsawpy
+    import mpas_tools.mesh.creation.mesh_definition_tools as mdt
 
     mesh = jigsawpy.jigsaw_msh_t()
     mprj = jigsawpy.jigsaw_msh_t()

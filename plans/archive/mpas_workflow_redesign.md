@@ -1,5 +1,10 @@
 # MPAS Workflow Redesign — Design Document
 
+> **Status: COMPLETED & SUPERSEDED (ARCHIVED)**
+> - **Outcome:** The single JSON configuration workflow, `config_manager.py` loader, `BaseWorkflow`, and `MPASWorkflow` were fully implemented.
+> - **Evolution:** Generalized across all mesh families (MPAS, LatLon, Healpix, ISEA, RHEALPix) via the Two-Tier Compiler architecture in [`two_tier_compiler_design.md`](../two_tier_compiler_design.md).
+> - **Active Reference:** See [`two_tier_compiler_design.md`](../two_tier_compiler_design.md) for current workflow architecture.
+
 > **Revision 3.** The System A "flat mesh-config template" pipeline is **dropped**.
 > A **single JSON file** (`workflow_config.json`) is the one and only source of truth,
 > and **each mesh type owns a class** that interprets that JSON and drives the run.

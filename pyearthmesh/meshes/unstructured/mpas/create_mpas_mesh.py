@@ -6,10 +6,10 @@ from osgeo import ogr, osr, gdal
 from pyearth.gis.geometry.convert_longitude_range import convert_360_to_180
 
 from pyearthmesh.utility.convert_attributes import convert_gcs_attributes_to_meshcell
-from pyearthmesh.meshes.unstructured.jigsaw.run_jigsaw import run_jigsaw
 from pyearthmesh.utility.potentiometric.calculate_potentiometric import (
     calculate_potentiometric,
 )
+
 
 
 gdal.UseExceptions()
@@ -133,6 +133,8 @@ def create_mpas_mesh(
         pFeature = ogr.Feature(pLayerDefn)
 
     if iFlag_run_jigsaw_in == 1:
+        from pyearthmesh.meshes.unstructured.jigsaw.run_jigsaw import run_jigsaw
+
         projector = [0.0, 0.0]
         geom, gprj, mesh, mprj = run_jigsaw(
             sWorkspace_jigsaw_in,

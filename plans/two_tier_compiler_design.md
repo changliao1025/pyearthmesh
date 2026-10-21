@@ -1,5 +1,11 @@
 # Two-Tier Compiler Pattern for Multi-Mesh Workflow Architecture
 
+> **Status: ACTIVE SPECIFICATION (CORE ARCHITECTURE IMPLEMENTED)**
+> - **Core Compiler Boundary:** Implemented via [`compile_workflow()`](../pyearthmesh/config/config_manager.py) and [`WorkflowSpec`](../pyearthmesh/config/workflows/base.py).
+> - **Implemented Workflow Adapters:** `MPASWorkflow`, `LatLonWorkflow`, `HealpixWorkflow`, `ISEAWorkflow`, `RHEALPixWorkflow`.
+> - **Test Suite:** Passing in [`tests/test_compile_workflow.py`](../tests/test_compile_workflow.py) and [`tests/test_workflow_spec.py`](../tests/test_workflow_spec.py).
+> - **Future Extensions:** Workflow classes for square, hexagon, tin, dggrid meshes can be added using the same compiler boundary.
+
 ## Purpose
 
 This document proposes a two-tier compiler architecture for `pyearthmesh` that is designed for the real scope of the package: multiple mesh families, not only MPAS.

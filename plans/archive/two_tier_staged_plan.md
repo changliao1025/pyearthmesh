@@ -1,5 +1,10 @@
 # Staged plan for the two-tier compiler architecture
 
+> **Status: COMPLETED (ARCHIVED)**
+> - **Execution Result:** All rollout steps (Steps 1–6) were successfully implemented and verified with tests (`tests/test_compile_workflow.py`, `tests/test_workflow_spec.py`).
+> - **Mesh Coverage Implemented:** MPAS, LatLon, Healpix, ISEA, RHEALPix workflows and cases are operational.
+> - **Active Design Spec:** See [`two_tier_compiler_design.md`](../two_tier_compiler_design.md).
+
 ## Step 1: define the generic front-end workflow contract
 
 Create a mesh-agnostic workflow specification that describes what the user wants, without backend-specific keys.

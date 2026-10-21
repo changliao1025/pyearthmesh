@@ -9,6 +9,8 @@ from pyearthmesh.classes.latlon import pylatlon
 from pyearthmesh.classes.link import pycelllink
 from pyearthmesh.classes.base_case import BaseCase
 from pyearthmesh.classes.mpas import pympas
+from pyearthmesh.classes.tin import pytin
+from pyearthmesh.classes.dggrid import pydggrid
 
 __all__ = [
     "BaseCase",
@@ -20,4 +22,7 @@ __all__ = [
     "pylatlon",
     "pycelllink",
     "pympas",
+    "pytin",
+    "pydggrid",
 ]
+

@@ -1,5 +1,12 @@
 # Zarr Implementation Plan for PyEarthMesh
 
+> **Status: ACTIVE ROADMAP (PHASES 1 & 2 IMPLEMENTED)**
+> - **Phase 1 (Core Zarr I/O):** [COMPLETED] [`pyearthmesh/utility/zarr_config.py`](../pyearthmesh/utility/zarr_config.py), [`pyearthmesh/utility/zarr_io.py`](../pyearthmesh/utility/zarr_io.py) (`ZarrMeshWriter`, `ZarrMeshReader`, `write_mesh_to_zarr`, `read_mesh_from_zarr`).
+> - **Phase 2 (Format Conversion):** [COMPLETED] [`pyearthmesh/utility/convert_mesh_formats.py`](../pyearthmesh/utility/convert_mesh_formats.py) (`convert_vector_to_zarr`, `convert_zarr_to_vector`, `convert_to_zarr`, `convert_from_zarr`), plus [`examples/zarr/example_convert_to_zarr.py`](../examples/zarr/example_convert_to_zarr.py).
+> - **Phase 3 (Direct Generator Integration):** [PENDING] Direct Zarr export parameters in `create_dggrid_mesh`, `create_mpas_mesh`, and `create_tin_mesh`.
+> - **Phase 4 (Performance & Parallelism):** [PENDING] Dask chunk-parallel writing and spatial R-tree indexing.
+> - **Phase 5 (Testing & Benchmarks):** [PENDING] Automated unit tests and 10M–100M cell scaling benchmarks.
+
 ## Executive Summary
 
 This document outlines the architecture and implementation plan for adding Zarr format support to PyEarthMesh for handling high-resolution meshes with 100+ million cells at 1km resolution. Zarr provides chunked, compressed, parallel-accessible storage that addresses the performance limitations of current formats (GPKG, NetCDF).

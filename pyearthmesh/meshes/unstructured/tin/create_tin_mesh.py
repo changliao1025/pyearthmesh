@@ -6,8 +6,7 @@ from pyearth.gis.location.convert_between_longitude_latitude_and_sphere_3d impor
     convert_sphere_3d_to_longitude_latitude,
 )
 from pyearthmesh.utility.convert_coordinates import convert_gcs_coordinates_to_meshcell
-from pyearthmesh.meshes.unstructured.jigsaw.run_jigsaw import run_jigsaw
-from pyearthmesh.meshes.unstructured.jigsaw.savetin import savetin
+
 
 
 def update_vertices_on_cell(nCell, nVertex, cellsOnVertex):
@@ -127,6 +126,9 @@ def create_tin_mesh(
         pFeature = ogr.Feature(pLayerDefn)
 
     if iFlag_run_jigsaw_in == 1:
+        from pyearthmesh.meshes.unstructured.jigsaw.run_jigsaw import run_jigsaw
+        from pyearthmesh.meshes.unstructured.jigsaw.savetin import savetin
+
         projector = [0.0, 0.0]
         geom, gprj, mesh, mprj = run_jigsaw(
             sWorkspace_jigsaw_in,

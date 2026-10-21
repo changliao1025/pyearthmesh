@@ -1,5 +1,10 @@
 # Buffer Zone Simplification Plan
 
+> **Status: COMPLETED (ARCHIVED)**
+> - **Implemented in:** [`create_coastline_buffer`](../../pyearthmesh/utility/create_coastline_buffer.py) with `iFlag_simplify_in=1`.
+> - **Underlying helper:** `create_buffer_zone_polygon_file(..., iFlag_simplify=...)` via `pyearthbuffer`.
+> - **Commit:** `0282412` (*enhence buffer*).
+
 ## Problem Statement
 
 After calculating buffer zones for multiple polygons (e.g., coastlines, islands), the resulting buffer polygons often **overlap with each other**. This creates several issues:

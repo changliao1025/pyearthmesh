@@ -20,6 +20,9 @@ from pyearthmesh.classes.hexagon import pyhexagon
 from pyearthmesh.classes.square import pysquare
 from pyearthmesh.classes.latlon import pylatlon
 from pyearthmesh.classes.link import pycelllink
+from pyearthmesh.classes.mpas import pympas
+from pyearthmesh.classes.tin import pytin
+from pyearthmesh.classes.dggrid import pydggrid
 
 __all__ = [
     "pyvertex",
@@ -29,4 +32,8 @@ __all__ = [
     "pysquare",
     "pylatlon",
     "pycelllink",
+    "pympas",
+    "pytin",
+    "pydggrid",
 ]
+
