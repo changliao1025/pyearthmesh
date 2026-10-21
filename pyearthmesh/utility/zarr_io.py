@@ -128,7 +128,7 @@ class ZarrMeshWriter:
                 "n_cells": n_cells,
                 "chunk_size": self.chunk_size,
                 "compression_profile": self.compression_profile,
-                "pyearthmesh_version": "0.1.0",
+                "pyearthmesh_version": "0.1.1",
                 "format_version": "1.0",
                 **(attributes or {}),
             }

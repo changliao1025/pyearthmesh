@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath("../../"))
 def get_version():
     """Read version from pyproject.toml"""
     if toml_lib is None:
-        return "0.1.0"
+        return "0.1.1"
 
     try:
         pyproject_path = os.path.join(
@@ -32,7 +32,7 @@ def get_version():
             pyproject_data = toml_lib.load(f)
         return pyproject_data["project"]["version"]
     except Exception:
-        return "0.1.0"
+        return "0.1.1"
 
 
 # -- General configuration ------------------------------------------------
@@ -92,8 +92,8 @@ try:
     version = _version
     release = _version
 except Exception:
-    version = "0.1.0"
-    release = "0.1.0"
+    version = "0.1.1"
+    release = "0.1.1"
 
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 templates_path = ["_templates"]

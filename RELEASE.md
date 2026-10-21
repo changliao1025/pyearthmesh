@@ -41,12 +41,12 @@ twine check dist/*
 ### Step 1: Update Version Number
 Update the version in pyproject.toml:
 ```toml
-version = "0.1.0"  # Change to your new version
+version = "0.1.1"  # Change to your new version
 ```
 
 Also update it in pyearthmesh/__init__.py:
 ```python
-__version__ = "0.1.0"  # Must match pyproject.toml
+__version__ = "0.1.1"  # Must match pyproject.toml
 ```
 
 ### Step 2: Update CHANGELOG
@@ -62,10 +62,10 @@ git push origin main
 ### Step 4: Create a GitHub Release
 1. Go to your repository on GitHub
 2. Click "Releases" → "Draft a new release"
-3. Click "Choose a tag" and create a new tag (e.g., `v0.1.0`)
-   - **Important**: The tag must start with 'v' (e.g., v0.1.0, v1.2.3)
+3. Click "Choose a tag" and create a new tag (e.g., `v0.1.1`)
+   - **Important**: The tag must start with 'v' (e.g., v0.1.1, v1.2.3)
    - The version after 'v' must match the version in pyproject.toml
-4. Set the release title (e.g., "Release v0.1.0")
+4. Set the release title (e.g., "Release v0.1.1")
 5. Add release notes describing changes
 6. Check "Set as a pre-release" if this is a beta/alpha version (will publish to TestPyPI)
 7. Click "Publish release"
@@ -117,7 +117,7 @@ twine upload dist/*
 ### Version Mismatch Error
 If the workflow fails with a version mismatch error:
 - Ensure the version in pyproject.toml matches the git tag (without the 'v' prefix)
-- Example: Tag `v0.1.0` should match version `0.1.0` in pyproject.toml
+- Example: Tag `v0.1.1` should match version `0.1.1` in pyproject.toml
 
 ### Authentication Error
 If upload fails with authentication error:

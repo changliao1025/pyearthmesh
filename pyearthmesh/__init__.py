@@ -8,7 +8,7 @@ This package provides tools for creating and manipulating various types of meshe
 Part of the PyEarthSuite ecosystem.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __author__ = "Chang Liao"
 __email__ = "changliao.climate@gmail.com"
 

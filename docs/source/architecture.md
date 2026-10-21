@@ -1,6 +1,6 @@
 # PyEarthMesh Architecture Reference
 
-`pyearthmesh` (v0.1.0) is a lightweight, high-performance mesh generation and spatial modeling package for Earth science applications, developed by Dr. Chang Liao (Pacific Northwest National Laboratory / E3SM project).
+`pyearthmesh` (v0.1.1) is a lightweight, high-performance mesh generation and spatial modeling package for Earth science applications, developed by Dr. Chang Liao (Pacific Northwest National Laboratory / E3SM project).
 
 It is a member of the **PyEarthSuite** ecosystem, providing comprehensive capabilities for regular grids, discrete global grid systems (DGGS), and unstructured Voronoi/Delaunay meshes.
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyearthmesh"
-version = "0.1.0"
+version = "0.1.1"
 description = "A lightweight mesh generation and manipulation package for Earth science applications"
 readme = "README.md"
 authors = [
@@ -35,10 +35,10 @@ dependencies = [
 
 [project.optional-dependencies]
 viz = [
-    "pyearthviz>=0.1.0",
+    "pyearthviz>=0.1.1",
 ]
 viz3d = [
-    "pyearthviz3d>=0.1.0",
+    "pyearthviz3d>=0.1.1",
 ]
 dev = [
     "pytest>=7.0",

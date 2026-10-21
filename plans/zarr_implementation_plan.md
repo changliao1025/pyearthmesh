@@ -281,7 +281,7 @@ mesh_attributes = {
     "n_cells": 100000000,
     "crs": "EPSG:4326",
     "creation_date": "2026-02-06",
-    "pyearthmesh_version": "0.1.0",
+    "pyearthmesh_version": "0.1.1",
     "bounding_box": [-180, -90, 180, 90],
     "cell_type": "hexagon",
     "max_vertices": 6,
