@@ -9,16 +9,14 @@ variable polygon shapes.
 
 import json
 from json import JSONEncoder
-from typing import List, Optional, Any, Tuple
-import numpy as np
+from typing import Any, List, Optional, Tuple
 
+import numpy as np
 from pyearth.gis.geometry.calculate_polygon_area import calculate_polygon_area
 
-from pyearthmesh.classes.vertex import pyvertex
 from pyearthmesh.classes.edge import pyedge
 from pyearthmesh.classes.meshcell import pymeshcell
-
-
+from pyearthmesh.classes.vertex import pyvertex
 
 
 class MpasClassEncoder(JSONEncoder):
@@ -149,6 +147,7 @@ class pympas(pymeshcell):
         # MPAS-specific attributes
         self.iFlag_watershed_boundary_burned: int = 0
         self.dElevation_profile0: float = -9999.0
+        self.dLength_edge: float = 0.0
 
         # Calculate initial properties
         self.calculate_cell_area()
@@ -344,6 +343,7 @@ class pympas(pymeshcell):
             self.calculate_cell_area()
 
         self.dLength = np.sqrt(self.dArea)
+        self.dLength_edge = self.dLength
         return self.dLength
 
     def share_edge(self, other: "pympas") -> int:
@@ -449,6 +449,7 @@ class pympas(pymeshcell):
         """
         if self.pBound is None:
             self.calculate_cell_bound()
+        assert self.pBound is not None
 
         dLon_min, _, dLon_max, _ = self.pBound
         return dLon_max > 180 or (dLon_max - dLon_min > 180)

@@ -8,10 +8,12 @@ between two vertices in the flowline network.
 
 import json
 from json import JSONEncoder
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 import numpy as np
-from pyearth.toolbox.mesh.point import pypoint
 from pyearth.toolbox.mesh.line import pyline
+from pyearth.toolbox.mesh.point import pypoint
+
 from pyearthmesh.classes.vertex import pyvertex
 
 

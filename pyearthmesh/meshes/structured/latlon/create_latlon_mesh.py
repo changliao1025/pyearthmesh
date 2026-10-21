@@ -8,9 +8,11 @@ number of rows/columns, and resolution.
 
 import os
 from typing import List, Optional, Tuple, Union
+
 import numpy as np
 from osgeo import ogr, osr
 from pyearth.gis.gdal.gdal_vector_format_support import get_vector_driver_from_filename
+
 from pyearthmesh.utility.convert_coordinates import convert_gcs_coordinates_to_meshcell
 
 # Constants
@@ -199,7 +201,7 @@ def create_latlon_mesh(
     # Handle boundary geometry
     # For geometry objects, WKT strings are used to avoid crashes when datasets are closed
     # Reference: https://gdal.org/api/python_gotchas.html
-    if pBoundary_in is None:
+    if pBoundary_in is None or pBoundary_in.strip() == "":
         print("Creating mesh with automatic bounding box boundary")
         try:
             pBoundary = _create_boundary_geometry(

@@ -1,19 +1,27 @@
 """PyEarthMesh classes module."""
 
-from pyearthmesh.classes.vertex import Vertex
-from pyearthmesh.classes.edge import Edge
-from pyearthmesh.classes.meshcell import MeshCell
-from pyearthmesh.classes.hexagon import Hexagon
-from pyearthmesh.classes.square import Square
-from pyearthmesh.classes.latlon import LatLon
-from pyearthmesh.classes.link import Link
+from pyearthmesh.classes.base_case import BaseCase
+from pyearthmesh.classes.dggrid import pydggrid
+from pyearthmesh.classes.edge import pyedge
+from pyearthmesh.classes.hexagon import pyhexagon
+from pyearthmesh.classes.latlon import pylatlon
+from pyearthmesh.classes.link import pycelllink
+from pyearthmesh.classes.meshcell import pymeshcell
+from pyearthmesh.classes.mpas import pympas
+from pyearthmesh.classes.square import pysquare
+from pyearthmesh.classes.tin import pytin
+from pyearthmesh.classes.vertex import pyvertex
 
 __all__ = [
-    "Vertex",
-    "Edge",
-    "MeshCell",
-    "Hexagon",
-    "Square",
-    "LatLon",
-    "Link",
+    "BaseCase",
+    "pyvertex",
+    "pyedge",
+    "pymeshcell",
+    "pyhexagon",
+    "pysquare",
+    "pylatlon",
+    "pycelllink",
+    "pympas",
+    "pytin",
+    "pydggrid",
 ]

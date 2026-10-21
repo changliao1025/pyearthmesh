@@ -1,20 +1,16 @@
-from pyearth.gis.geometry.extract_unique_vertices_and_connectivity import (
-    extract_unique_vertices_and_connectivity,
-)
-from pyearth.gis.geometry.calculate_polygon_area import calculate_polygon_area
-from pyearth.gis.geometry.international_date_line_utility import (
-    split_international_date_line_polygon_coordinates,
-    check_cross_international_date_line_polygon,
-)
-from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
-from pyearth.gis.gdal.gdal_vector_format_support import get_vector_driver_from_filename
-import os
 import logging
+import os
 import traceback
-from typing import Optional, Tuple, List, Dict, Any, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
+
 import numpy as np
 from numpy.typing import NDArray
 from osgeo import gdal, ogr
+from pyearth.gis.gdal.gdal_vector_format_support import get_vector_driver_from_filename
+from pyearth.gis.idl_handler import IdlHandler, IdlStrategy
+from pyearth.gis.location.get_geometry_coordinates import get_geometry_coordinates
+from pyearth.gis.polar_handler import polygon_includes_pole
+
 
 def setup_logger(module_name: str):
     # Use the module name to create a unique log file
@@ -45,10 +41,14 @@ def setup_logger(module_name: str):
 
     return logger
 
+
 logger = setup_logger(__name__.split(".")[-1])
 
+
 def check_geometry_validity(
-    sFilename_source_mesh: str, iFlag_verbose_in: bool = False
+    sFilename_source_mesh: str,
+    iFlag_verbose_in: bool = False,
+    iFlag_fast_return_in: bool = True,
 ) -> bool:
     """
     Comprehensive check of all geometries in a mesh vector file.
@@ -63,12 +63,15 @@ def check_geometry_validity(
     Args:
         sFilename_source_mesh (str): Path to the source mesh vector file
         iFlag_verbose_in (bool): If True, print detailed progress messages
+        iFlag_fast_return_in (bool): If True, return immediately on the first
+            invalid geometry found (fast-fail). Default is False.
 
     Returns:
         bool: True if all geometries are valid, False otherwise
     """
     try:
-        pDataset = ogr.Open(sFilename_source_mesh, 0)  # Read-only
+        # Use gdal.OpenEx for better format support (especially parquet)
+        pDataset = ogr.Open(sFilename_source_mesh, 0)
         if pDataset is None:
             logger.error(f"Failed to open file: {sFilename_source_mesh}")
             return False
@@ -108,6 +111,13 @@ def check_geometry_validity(
         for pFeature in pLayer:
             if pFeature is None:
                 invalid_geometry_count += 1
+                if iFlag_fast_return_in:
+                    pDataset = None
+                    if iFlag_verbose_in:
+                        logger.info(
+                            f"Fast-return: invalid geometry at feature {iFeature_index}"
+                        )
+                    return False
                 iFeature_index += 1
                 continue
 
@@ -115,6 +125,13 @@ def check_geometry_validity(
             if pGeometry is None:
                 logger.warning(f"Feature {iFeature_index} has no geometry")
                 invalid_geometry_count += 1
+                if iFlag_fast_return_in:
+                    pDataset = None
+                    if iFlag_verbose_in:
+                        logger.info(
+                            f"Fast-return: feature {iFeature_index} has no geometry"
+                        )
+                    return False
                 iFeature_index += 1
                 continue
 
@@ -125,6 +142,13 @@ def check_geometry_validity(
                     pGeometry, iFeature_index, iFlag_verbose_in
                 ):
                     invalid_geometry_count += 1
+                    if iFlag_fast_return_in:
+                        pDataset = None
+                        if iFlag_verbose_in:
+                            logger.info(
+                                f"Fast-return: invalid polygon at feature {iFeature_index}"
+                            )
+                        return False
                 else:
                     valid_geometry_count += 1
 
@@ -133,6 +157,13 @@ def check_geometry_validity(
                     pGeometry, iFeature_index, iFlag_verbose_in
                 ):
                     invalid_geometry_count += 1
+                    if iFlag_fast_return_in:
+                        pDataset = None
+                        if iFlag_verbose_in:
+                            logger.info(
+                                f"Fast-return: invalid multipolygon at feature {iFeature_index}"
+                            )
+                        return False
                 else:
                     valid_geometry_count += 1
 
@@ -141,12 +172,26 @@ def check_geometry_validity(
                     f"Feature {iFeature_index}: Geometry type {sGeometry_type} not supported for mesh processing"
                 )
                 invalid_geometry_count += 1
+                if iFlag_fast_return_in:
+                    pDataset = None
+                    if iFlag_verbose_in:
+                        logger.info(
+                            f"Fast-return: unsupported geometry {sGeometry_type} at feature {iFeature_index}"
+                        )
+                    return False
 
             else:
                 logger.warning(
                     f"Feature {iFeature_index}: Unknown geometry type {sGeometry_type}"
                 )
                 invalid_geometry_count += 1
+                if iFlag_fast_return_in:
+                    pDataset = None
+                    if iFlag_verbose_in:
+                        logger.info(
+                            f"Fast-return: unknown geometry type at feature {iFeature_index}"
+                        )
+                    return False
 
             iFeature_index += 1
 
@@ -304,8 +349,12 @@ def create_geometry_from_coordinates(
         logger.error(f"Unsupported geometry type for creation: {geometry_type}")
         return None
 
+
 def fix_mesh_longitude_range_and_idl_crossing(
-    sFilename_in: str, sFilename_out: str, handle_idl_crossing: bool = True
+    sFilename_in: str,
+    sFilename_out: str,
+    handle_idl_crossing: bool = True,
+    iFlag_drop_idl_crossing_cells_in=False,
 ) -> bool:
     """
     Comprehensive GDAL-based function to fix longitude range issues and optionally handle
@@ -323,14 +372,13 @@ def fix_mesh_longitude_range_and_idl_crossing(
     Returns:
         bool: True if successful, False otherwise
     """
-    pDriver = None
+
     pDataset = None
     pDataset_out = None
 
     try:
-        # Open source dataset
-        pDriver = get_vector_driver_from_filename(sFilename_in)
-        pDataset = pDriver.Open(sFilename_in, 0)
+        # Open source dataset - use gdal.OpenEx for better format support (e.g., parquet)
+        pDataset = ogr.Open(sFilename_in, 0)
         if pDataset is None:
             logger.error(f"Could not open input file: {sFilename_in}")
             return False
@@ -390,12 +438,10 @@ def fix_mesh_longitude_range_and_idl_crossing(
                         )
                         continue
 
-                    geometry_type = geometry.GetGeometryName()
+                    # use cellid for debug
+                    cellid = pFeature.GetField("cellid")
 
-                    # check whether geometry contains poles
-                    aCoord_origin = get_geometry_coordinates(geometry)
-                    if np.min(np.abs(aCoord_origin[:, 1])) > 88.0:
-                        continue
+                    geometry_type = geometry.GetGeometryName()
                     # Fix longitude coordinates using GDAL
                     fixed_geometry = fix_longitude_range_gdal(geometry)
                     # Ensure the geometry is 2D
@@ -408,9 +454,19 @@ def fix_mesh_longitude_range_and_idl_crossing(
                     ]:
                         # Check for IDL crossing after longitude normalization
                         aCoord = get_geometry_coordinates(fixed_geometry)
-                        bCross_idl, aCoord_updated = (
-                            check_cross_international_date_line_polygon(aCoord)
-                        )
+                        # Skip cells that truly include a pole (interior containment only)
+                        if polygon_includes_pole(
+                            aCoord, pole="south", include_boundary=True
+                        ) or polygon_includes_pole(
+                            aCoord, pole="north", include_boundary=True
+                        ):
+                            continue
+
+                        cellid = pFeature.GetField("cellid")
+
+                        idl_result = IdlHandler(IdlStrategy.CHECK_ONLY).detect(aCoord)
+                        bCross_idl = idl_result.crosses_idl
+                        aCoord_updated = idl_result.adjusted_coords
 
                         if bCross_idl:
                             idl_crossing_count += 1
@@ -418,42 +474,90 @@ def fix_mesh_longitude_range_and_idl_crossing(
                                 f"Feature ID {pFeature.GetFID()} crosses the International Date Line. Splitting..."
                             )
 
-                            [eastern_polygon, western_polygon] = (
-                                split_international_date_line_polygon_coordinates(
+                            if iFlag_drop_idl_crossing_cells_in:
+                                logger.info(
+                                    f"Dropping feature ID {pFeature.GetFID()} due to IDL crossing as per configuration."
+                                )
+                                continue
+                            else:
+                                # keep with split method
+                                split_result = IdlHandler(IdlStrategy.SPLIT).detect(
                                     aCoord
                                 )
-                            )
+                                eastern_polygon, western_polygon = (
+                                    split_result.sub_polygons
+                                )
 
-                            # Create a multipolygon geometry (force 2D)
-                            pGeometry_multi = ogr.Geometry(ogr.wkbMultiPolygon)
+                                # Check if eastern polygon is valid (not empty and not degenerate)
+                                if (
+                                    len(eastern_polygon) == 0
+                                    or np.abs(np.min(eastern_polygon[:, 0]) - 180)
+                                    < 1e-6
+                                ):
+                                    iFlag_eastern_valid = False
+                                else:
+                                    iFlag_eastern_valid = True
+                                    # Create eastern polygon
+                                    # Note: split function returns closed polygons (first == last)
+                                    # CloseRings() will handle closure, so we don't add the last point
+                                    pPolygon_eastern = ogr.Geometry(ogr.wkbPolygon)
+                                    pLinearRing_eastern = ogr.Geometry(
+                                        ogr.wkbLinearRing
+                                    )
+                                    # Add all points except the last (closing) point
+                                    for coord in eastern_polygon[:-1]:
+                                        # Force 2D by only using x,y coordinates
+                                        pLinearRing_eastern.AddPoint_2D(
+                                            coord[0], coord[1]
+                                        )
+                                    pLinearRing_eastern.CloseRings()
+                                    pPolygon_eastern.AddGeometry(pLinearRing_eastern)
+                                    # Ensure the polygon is 2D
+                                    pPolygon_eastern.FlattenTo2D()
 
-                            # Create eastern polygon
-                            pPolygon_eastern = ogr.Geometry(ogr.wkbPolygon)
-                            pLinearRing_eastern = ogr.Geometry(ogr.wkbLinearRing)
-                            for coord in eastern_polygon:
-                                # Force 2D by only using x,y coordinates
-                                pLinearRing_eastern.AddPoint_2D(coord[0], coord[1])
-                            pLinearRing_eastern.CloseRings()
-                            pPolygon_eastern.AddGeometry(pLinearRing_eastern)
-                            # Ensure the polygon is 2D
-                            pPolygon_eastern.FlattenTo2D()
-                            pGeometry_multi.AddGeometry(pPolygon_eastern)
+                                # Check if western polygon is valid (not empty and not degenerate)
+                                if (
+                                    len(western_polygon) == 0
+                                    or np.abs(np.max(western_polygon[:, 0]) + 180)
+                                    < 1e-6
+                                ):
+                                    iFlag_western_valid = False
+                                else:
+                                    iFlag_western_valid = True
+                                    # Create western polygon
+                                    # Note: split function returns closed polygons (first == last)
+                                    # CloseRings() will handle closure, so we don't add the last point
+                                    pPolygon_western = ogr.Geometry(ogr.wkbPolygon)
+                                    pLinearRing_western = ogr.Geometry(
+                                        ogr.wkbLinearRing
+                                    )
+                                    # Add all points except the last (closing) point
+                                    for coord in western_polygon[:-1]:
+                                        # Force 2D by only using x,y coordinates
+                                        pLinearRing_western.AddPoint_2D(
+                                            coord[0], coord[1]
+                                        )
+                                    pLinearRing_western.CloseRings()
+                                    pPolygon_western.AddGeometry(pLinearRing_western)
+                                    # Ensure the polygon is 2D
+                                    pPolygon_western.FlattenTo2D()
 
-                            # Create western polygon
-                            pPolygon_western = ogr.Geometry(ogr.wkbPolygon)
-                            pLinearRing_western = ogr.Geometry(ogr.wkbLinearRing)
-                            for coord in western_polygon:
-                                # Force 2D by only using x,y coordinates
-                                pLinearRing_western.AddPoint_2D(coord[0], coord[1])
-                            pLinearRing_western.CloseRings()
-                            pPolygon_western.AddGeometry(pLinearRing_western)
-                            # Ensure the polygon is 2D
-                            pPolygon_western.FlattenTo2D()
-                            pGeometry_multi.AddGeometry(pPolygon_western)
+                                if iFlag_eastern_valid and iFlag_western_valid:
+                                    # Create a multipolygon geometry (force 2D)
+                                    pGeometry_multi = ogr.Geometry(ogr.wkbMultiPolygon)
+                                    pGeometry_multi.AddGeometry(pPolygon_eastern)
+                                    pGeometry_multi.AddGeometry(pPolygon_western)
+                                    # Ensure the entire multipolygon is 2D
+                                    pGeometry_multi.FlattenTo2D()
+                                    final_geometry = pGeometry_multi
+                                else:
+                                    if iFlag_eastern_valid:
+                                        final_geometry = pPolygon_eastern
+                                    elif iFlag_western_valid:
+                                        final_geometry = pPolygon_western
+                                    else:
+                                        continue
 
-                            # Ensure the entire multipolygon is 2D
-                            pGeometry_multi.FlattenTo2D()
-                            final_geometry = pGeometry_multi
                         else:
                             if aCoord_updated is not None:
                                 # Update fixed_geometry with adjusted coordinates to create a polygon, usually because of IDL
@@ -530,12 +634,18 @@ def fix_mesh_longitude_range_and_idl_crossing(
             pDataset = None
 
 
-def check_mesh_quality(sFilename_mesh_in: str, iFlag_verbose_in: bool = False) -> str:
+def check_mesh_quality(
+    sFilename_mesh_in: str,
+    iFlag_drop_idl_crossing_cells_in: bool = False,
+    iFlag_verbose_in: bool = False,
+) -> str:
     """
     Check mesh quality and fix if necessary.
 
     Args:
         sFilename_mesh_in (str): Path to the input mesh file
+        iFlag_drop_idl_crossing_cells_in (bool, optional): If True, drop cells crossing the International Date Line.
+            Default is False.
         iFlag_verbose_in (bool, optional): If True, print detailed progress messages.
             Default is False.
 
@@ -548,12 +658,16 @@ def check_mesh_quality(sFilename_mesh_in: str, iFlag_verbose_in: bool = False) -
         # we need to fix the mesh using the IDL splitting utility
         # Make the filename adjustment more flexible to handle any format
         # Get the file extension and base name
+
         file_base, file_ext = os.path.splitext(sFilename_mesh_in)
         file_ext = file_ext.lstrip(".")
         sFilename_source_mesh_fixed = f"{file_base}_fixed.{file_ext}"
         fix_mesh_longitude_range_and_idl_crossing(
-            sFilename_mesh_in, sFilename_source_mesh_fixed
+            sFilename_mesh_in,
+            sFilename_source_mesh_fixed,
+            iFlag_drop_idl_crossing_cells_in=iFlag_drop_idl_crossing_cells_in,
         )
+
         return sFilename_source_mesh_fixed
     return sFilename_mesh_in
 
@@ -599,8 +713,20 @@ def _validate_polygon_geometry(
             logger.warning(f"  Latitude range: {lats.min():.3f} to {lats.max():.3f}")
             return False
 
+        # also add south and north pole check, as GDAL geometry validity check cannot handle cells that include poles
+        if polygon_includes_pole(aCoord, pole="south", include_boundary=True):
+            logger.warning(f"Feature {feature_id}: Polygon includes the South Pole")
+            return True  # we want to execlude them for now
+        if polygon_includes_pole(aCoord, pole="north", include_boundary=True):
+            logger.warning(f"Feature {feature_id}: Polygon includes the North Pole")
+            return True
+
         # Check for International Date Line crossing (this is allowed but logged)
-        iCross_idl, dummy = check_cross_international_date_line_polygon(aCoord)
+        idl_result = IdlHandler(IdlStrategy.CHECK_ONLY).detect(aCoord)
+        iCross_idl = idl_result.crosses_idl
+        if np.any(lons < -170) and np.any(lons > 170):
+            if not iCross_idl:
+                print("debug: feature crosses IDL based on coordinate range check")
         if iCross_idl:
             if iFlag_verbose_in:
                 logger.info(
@@ -621,7 +747,6 @@ def _validate_polygon_geometry(
             f"Feature {feature_id}: Error validating polygon geometry: {str(e)}"
         )
         return False
-
 
 
 def _validate_multipolygon_geometry(

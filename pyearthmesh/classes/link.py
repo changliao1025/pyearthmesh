@@ -8,12 +8,13 @@ for defining the connectivity and adjacency relationships in mesh networks.
 
 import json
 from json import JSONEncoder
-from typing import Optional, Any, Tuple
+from typing import Any, Optional, Tuple
+
 import numpy as np
 
-from pyearthmesh.classes.vertex import pyvertex
 from pyearthmesh.classes.edge import pyedge
 from pyearthmesh.classes.meshcell import pymeshcell
+from pyearthmesh.classes.vertex import pyvertex
 
 
 class LinkClassEncoder(JSONEncoder):

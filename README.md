@@ -26,7 +26,7 @@ PyEarthMesh depends on the following packages:
 **Required:**
 
 Because PyEarthMesh relies on many APIs from PyEarth, it requires PyEarth to be installed.
-Other than that, additonal dependencies maybe required based on the specific functionalities you intend to use:
+Other than that, additional dependencies maybe required based on the specific functionalities you intend to use:
 
 1. `dggrid` - For DGGRID mesh generation
 2. `dggal` - For DGGS mesh manipulation

@@ -1,0 +1,27 @@
+{
+  "workflow": {
+    "date": null,
+    "mesh_type": "isea",
+    "case_index": 1,
+    "model": "isea",
+    "debug": false,
+    "run_on_hpc": false
+  },
+  "resolutions": {
+    "meter": 1000.0
+  },
+  "paths": {
+    "output_workspace": {
+      "Linux": "/compyfs/liao313/04model/pyearthmesh/isea3h/1km",
+      "default": "./output/isea3h/1km"
+    },
+    "output_mesh": "isea3h_mesh.geojson"
+  },
+  "features": {
+    "isea_type": "ISEA3H",
+    "use_tiles": false,
+    "tile_mode": "simple",
+    "convert_to_parquet": true,
+    "check_mesh_quality": true
+  }
+}

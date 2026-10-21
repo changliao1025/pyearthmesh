@@ -9,12 +9,15 @@ and functionality.
 import enum
 import json
 from json import JSONEncoder
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
+
 import numpy as np
-from pyearth.toolbox.mesh.point import pypoint
 from pyearth.toolbox.mesh.line import pyline
+from pyearth.toolbox.mesh.point import pypoint
 from pyearth.toolbox.mesh.polygon import pypolygon
+
 from .vertex import pyvertex
+
 
 class CellClassEncoder(JSONEncoder):
     """
@@ -170,10 +173,8 @@ class pymeshcell(pypolygon):
                 f"Cell must have at least 3 edges to form a valid polygon, got {nEdge}"
             )
 
-        if len(aVertex) < 4:  # Need at least 3 unique points + 1 closing point
-            raise ValueError(
-                f"Cell must have at least 4 points (including closing point), got {len(aVertex)}"
-            )
+        if len(aVertex) < 3:
+            raise ValueError(f"Cell must have at least 3 vertices, got {len(aVertex)}")
 
         # Convert aEdge to aLine with proper type handling
         aLine = []
@@ -605,7 +606,7 @@ class pymeshcell(pypolygon):
             return self.nNeighbor_land if self.nNeighbor_land >= 0 else 0
         elif neighbor_type == "ocean":
             return self.nNeighbor_ocean if self.nNeighbor_ocean >= 0 else 0
-        elif neighbor_type == "virtual":
+        else:  # virtual
             return (
                 self.nNeighbor_land_virtual if self.nNeighbor_land_virtual >= 0 else 0
             )

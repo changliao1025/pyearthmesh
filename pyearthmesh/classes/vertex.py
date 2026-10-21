@@ -7,7 +7,8 @@ vertex attributes and functionality.
 
 import json
 from json import JSONEncoder
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 import numpy as np
 from pyearth.toolbox.mesh.point import pypoint
 
@@ -204,7 +205,6 @@ class pyvertex(pypoint):
                 f"Vertex index must be an integer, got {type(lVertexIndex)}"
             )
         self.lVertexIndex = int(lVertexIndex)
-
 
     def is_valid(self) -> bool:
         """

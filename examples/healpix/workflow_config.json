@@ -1,0 +1,21 @@
+{
+  "workflow": {
+    "date": null,
+    "mesh_type": "healpix",
+    "case_index": 1,
+    "model": "healpix",
+    "debug": false,
+    "run_on_hpc": false
+  },
+  "resolutions": {
+    "meter": 5000
+  },
+  "paths": {
+    "output_workspace": "../../data/healpix/5km",
+    "output_mesh": "healpix_mesh.geojson"
+  },
+  "features": {
+    "use_tiles": true,
+    "tile_mode": "base"
+  }
+}
