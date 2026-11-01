@@ -1,0 +1,33 @@
+# ==============================================================================
+# Tier 1 Specification: rHEALPix Discrete Global Grid System (DGGS) Workflow
+#
+# The rHEALPix DGGS projects the sphere onto a planar square planar topology
+# with 6 base square facets, combining equal-area cells with standard matrix
+# sub-cell indexing.
+# ==============================================================================
+
+# Workflow metadata and runtime execution controls
+workflow:
+  date: null                         # Run date string (YYYYMMDD); null defaults to current date
+  mesh_type: rhealpix                # Mesh family identifier: rhealpix
+  case_index: 1                      # Case index identifier
+  model: rhealpix                    # Generator model name
+  debug: false                       # Enable detailed diagnostic messages
+  run_on_hpc: false                  # Whether to dispatch via SLURM job scripts
+
+# Spatial resolution settings
+resolutions:
+  meter: 10000.0                     # Target cell width in meters (10 km)
+
+# File and workspace path configurations (supports OS-dependent paths)
+paths:
+  output_workspace:
+    Linux: /compyfs/liao313/04model/pyearthmesh/rhealpix/10km   # Path on Linux cluster / HPC
+    default: ./output/rhealpix/10km                             # Local development fallback
+  output_mesh: rhealpix_mesh.geojson                           # Mesh output filename
+
+# DGGS partitioning and export options
+features:
+  use_tiles: true                    # Divide global coverage across base facet tiles
+  tile_mode: base                    # Partitioning mode: 'base' (6 base squares) or 'simple'
+  convert_to_parquet: true           # Export tabular cell attributes to Apache Parquet

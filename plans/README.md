@@ -8,7 +8,7 @@ This directory contains architectural specifications, implementation plans, and 
 
 | Plan / Document | Type | Implementation Status | Implementation Location | Test Verification |
 | :--- | :--- | :--- | :--- | :--- |
-| [**`two_tier_compiler_design.md`**](two_tier_compiler_design.md) | Architecture Spec | **Core Implemented (5 mesh families)** | [`pyearthmesh/config/config_manager.py`](../pyearthmesh/config/config_manager.py), [`pyearthmesh/config/workflows/`](../pyearthmesh/config/workflows/) | [`tests/test_compile_workflow.py`](../tests/test_compile_workflow.py), [`tests/test_workflow_spec.py`](../tests/test_workflow_spec.py) (21 tests passing) |
+| [**`two_tier_compiler_design.md`**](two_tier_compiler_design.md) | Architecture Spec | **Core Implemented & YAML-Extended (5 mesh families)** | [`pyearthmesh/config/config_manager.py`](../pyearthmesh/config/config_manager.py), [`pyearthmesh/config/workflows/`](../pyearthmesh/config/workflows/) | [`tests/test_compile_workflow.py`](../tests/test_compile_workflow.py), [`tests/test_workflow_spec.py`](../tests/test_workflow_spec.py) (26 tests passing) |
 | [**`zarr_implementation_plan.md`**](zarr_implementation_plan.md) | Feature Roadmap | **Phases 1 & 2 Complete; Phases 3–5 Pending** | [`pyearthmesh/utility/zarr_config.py`](../pyearthmesh/utility/zarr_config.py), [`pyearthmesh/utility/zarr_io.py`](../pyearthmesh/utility/zarr_io.py), [`pyearthmesh/utility/convert_mesh_formats.py`](../pyearthmesh/utility/convert_mesh_formats.py) | Verified with [`examples/zarr/example_convert_to_zarr.py`](../examples/zarr/example_convert_to_zarr.py) |
 | [**`archive/two_tier_staged_plan.md`**](archive/two_tier_staged_plan.md) | Rollout Plan | **Completed** | Full staged rollout of the two-tier compiler boundary (Steps 1–6) | Fully covered by unit tests |
 | [**`archive/mpas_workflow_redesign.md`**](archive/mpas_workflow_redesign.md) | Redesign Spec | **Completed & Superseded** | JSON workflow config loader merged into `config_manager.py`, `MPASWorkflow`, `mpas_example.py` | Verified in MPAS example and tests |
@@ -21,7 +21,7 @@ This directory contains architectural specifications, implementation plans, and 
 ### 1. [`two_tier_compiler_design.md`](two_tier_compiler_design.md)
 - **Role:** Master architecture document for the configuration and workflow subsystem.
 - **Key Concepts:**
-  - **Tier 1 (Frontend Spec):** [`WorkflowSpec`](../pyearthmesh/config/workflows/base.py) defines high-level domain intent (region, resolution, features, paths) independent of mesh backends.
+  - **Tier 1 (Frontend Spec):** [`WorkflowSpec`](../pyearthmesh/config/workflows/base.py) defines high-level domain intent (region, resolution, features, paths) independent of mesh backends. Supported via user-friendly **YAML with inline/block comments (`#`)** as primary format, alongside JSON for programmatic pipelines.
   - **Compiler Boundary:** [`compile_workflow()`](../pyearthmesh/config/config_manager.py) compiles the generic spec into backend-native configurations for specific generators.
   - **Tier 2 (Execution Model):** Mesh-native Case adapters (`MPASCase`, `LatLonCase`, `HealpixCase`, `ISEACase`, `RHEALPixCase`) orchestrate workspace preparation (`setup()`) and execution (`run()`).
 - **Current Support:**

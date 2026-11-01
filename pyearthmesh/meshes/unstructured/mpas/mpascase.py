@@ -281,11 +281,19 @@ class mpascase(BaseCase):
         ofs_mpas.write(sLine)
         sFilename_workflow_in = self.sFilename_model_configuration
         if not sFilename_workflow_in:
-            sFilename_workflow_in = os.path.join(
-                str(Path(self.sWorkspace_output)), "workflow_config.json"
-            )
-            with open(sFilename_workflow_in, "w") as f_cfg:
-                json.dump(self.config, f_cfg, indent=2)
+            try:
+                from pyearthmesh.config.config_manager import dump_workflow_config
+
+                sFilename_workflow_in = os.path.join(
+                    str(Path(self.sWorkspace_output)), "workflow_config.yaml"
+                )
+                dump_workflow_config(self.config, sFilename_workflow_in, fmt="yaml")
+            except Exception:
+                sFilename_workflow_in = os.path.join(
+                    str(Path(self.sWorkspace_output)), "workflow_config.json"
+                )
+                with open(sFilename_workflow_in, "w") as f_cfg:
+                    json.dump(self.config, f_cfg, indent=2)
 
         sLine = "from pyearthmesh.config.config_manager import create_workflow" + "\n"
         ofs_mpas.write(sLine)

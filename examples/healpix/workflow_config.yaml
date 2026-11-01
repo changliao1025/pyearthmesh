@@ -1,0 +1,30 @@
+# ==============================================================================
+# Tier 1 Specification: Equal-Area HEALPix Spherical Mesh Workflow
+#
+# HEALPix (Hierarchical Equal Area isoLatitude Pixelization) partitions the
+# sphere into 12 base diamond facets with equal-area hierarchical subdivisions.
+# This YAML specification sets resolution and partitioning policies.
+# ==============================================================================
+
+# Workflow metadata and runtime execution controls
+workflow:
+  date: null                         # Run date string (YYYYMMDD); null defaults to current date
+  mesh_type: healpix                 # Mesh family identifier: healpix
+  case_index: 1                      # Case index identifier
+  model: healpix                     # Generator model name
+  debug: false                       # Enable detailed diagnostic messages
+  run_on_hpc: false                  # Whether to dispatch via SLURM job scripts
+
+# Spatial resolution settings
+resolutions:
+  meter: 5000                        # Target cell diameter / resolution in meters (5 km)
+
+# File and workspace path configurations
+paths:
+  output_workspace: ../../data/healpix/5km   # Output directory (relative to this YAML file)
+  output_mesh: healpix_mesh.geojson          # Destination mesh GeoJSON filename
+
+# Spherical pixelization and tiling features
+features:
+  use_tiles: true                    # Enable tiled multi-file output
+  tile_mode: base                    # Partitioning mode: 'base' (12 base diamonds) or 'simple'

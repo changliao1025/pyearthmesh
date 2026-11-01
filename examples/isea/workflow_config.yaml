@@ -1,0 +1,35 @@
+# ==============================================================================
+# Tier 1 Specification: ISEA3H Discrete Global Grid System (DGGS) Workflow
+#
+# Generates an Icosahedral Snyder Equal Area Aperture 3 Hexagonal (ISEA3H)
+# spherical mesh. This YAML specification defines aperture, resolution, and
+# platform-specific output directories.
+# ==============================================================================
+
+# Workflow metadata and runtime execution controls
+workflow:
+  date: null                         # Run date string (YYYYMMDD); null defaults to current date
+  mesh_type: isea                    # Mesh family identifier: isea
+  case_index: 1                      # Case index identifier
+  model: isea                        # Generator model name
+  debug: false                       # Enable detailed diagnostic messages
+  run_on_hpc: false                  # Whether to dispatch via SLURM job scripts
+
+# Spatial resolution settings
+resolutions:
+  meter: 1000.0                      # Target hexagon cell resolution in meters (1 km)
+
+# File and workspace path configurations (supports OS-dependent paths)
+paths:
+  output_workspace:
+    Linux: /compyfs/liao313/04model/pyearthmesh/isea3h/1km   # Path on Linux cluster / HPC
+    default: ./output/isea3h/1km                             # Local development fallback
+  output_mesh: isea3h_mesh.geojson                           # Mesh output filename
+
+# ISEA / DGGS specific features and conversion options
+features:
+  isea_type: ISEA3H                  # Aperture family: ISEA3H, ISEA4H, ISEA7H, etc.
+  use_tiles: false                   # Divide global mesh into partitioned sub-tiles
+  tile_mode: simple                  # Tiling layout mode: 'simple' or 'base'
+  convert_to_parquet: true           # Export tabular attributes to Apache Parquet
+  check_mesh_quality: true           # Run topological validation and area distortion checks

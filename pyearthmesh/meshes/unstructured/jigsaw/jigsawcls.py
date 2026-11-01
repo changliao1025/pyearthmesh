@@ -157,8 +157,21 @@ class jigsawcase:
         if self.sFilename_model_configuration is None:
             raise ValueError("sFilename_model_configuration is not set")
 
-        with open(self.sFilename_model_configuration) as f:
-            aConfig = json.load(f)
+        from pathlib import Path
+
+        ext = Path(self.sFilename_model_configuration).suffix.lower()
+        if ext in (".yaml", ".yml"):
+            try:
+                import yaml
+
+                with open(self.sFilename_model_configuration, encoding="utf-8") as f:
+                    aConfig = yaml.safe_load(f)
+            except ImportError:
+                with open(self.sFilename_model_configuration, encoding="utf-8") as f:
+                    aConfig = json.load(f)
+        else:
+            with open(self.sFilename_model_configuration, encoding="utf-8") as f:
+                aConfig = json.load(f)
 
         projector = [0.0, 0.0]
         geom, gprj, mesh, mprj = run_jigsaw(

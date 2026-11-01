@@ -13,6 +13,7 @@ dependencies:
   - jigsawpy
   - mpas-tools
   - pyearth
+  - pyyaml
   - pip
   - pip:
     - -e .[docs,dev]
