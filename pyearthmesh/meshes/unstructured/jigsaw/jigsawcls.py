@@ -4,7 +4,7 @@ import os
 import stat
 from pathlib import Path
 
-from mpas_land_mesh.utilities.system import get_python_environment
+from pyearth.system.python.get_python_environment import get_python_environment
 
 # create a simple jigsaw run case class
 pDate = datetime.datetime.today()
@@ -152,7 +152,7 @@ class jigsawcase:
         """
         import json
 
-        from mpas_land_mesh.mesh.jigsaw.run_jigsaw import run_jigsaw
+        from pyearthmesh.meshes.unstructured.jigsaw.run_jigsaw import run_jigsaw
 
         if self.sFilename_model_configuration is None:
             raise ValueError("sFilename_model_configuration is not set")
@@ -233,12 +233,12 @@ class jigsawcase:
         )
         ofs_jigsaw.write(sLine)
         sLine = (
-            "from mpas_land_mesh.utilities.config_manager import read_jigsaw_configuration_file"
+            "from pyearthmesh.config.config_manager import read_jigsaw_configuration_file"
             + "\n"
         )
         ofs_jigsaw.write(sLine)
         sLine = (
-            "from mpas_land_mesh.mesh.mpas.create_mpas_mesh import create_mpas_mesh"
+            "from pyearthmesh.meshes.unstructured.mpas.create_mpas_mesh import create_mpas_mesh"
             + "\n"
         )
         ofs_jigsaw.write(sLine)
