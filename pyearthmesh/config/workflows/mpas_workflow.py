@@ -46,7 +46,6 @@ class MPASWorkflow(BaseWorkflow):
             "paths": {
                 "input_workspace": "",
                 "output_workspace": "./output",
-                "hydrosheds_rivers": "",
                 "region_geometry": "",
                 "dam_vector": "",
             },
@@ -169,14 +168,6 @@ class MPASWorkflow(BaseWorkflow):
         for key, value in jigsaw.items():
             if key not in excluded_keys:
                 config[key] = value
-
-        river_vector = paths.get("hydrosheds_rivers") or features.get(
-            "hydrosheds_rivers"
-        )
-        if river_vector:
-            config["sFilename_river_network_vector"] = river_vector
-            config["iFlag_geom_river_network"] = True
-            config["iFlag_spac_river_network"] = True
 
         dam_vector = paths.get("dam_vector") or features.get("dam_vector")
         if dam_vector:

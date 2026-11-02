@@ -45,7 +45,6 @@ DEFAULT_CONFIG: dict[str, dict[str, Any]] = {
     "paths": {
         "input_workspace": "",
         "output_workspace": "./output",
-        "hydrosheds_rivers": "",
         "region_geometry": "",
         "dam_vector": "",
         "city_vector": "",
