@@ -27,6 +27,7 @@ def create_mpas_mesh(
     iFlag_arctic_in=None,
     iFlag_fill_hole_in=None,
     pBoundary_in=None,
+    sFilename_mesh_boundary_in=None,
     sWorkspace_jigsaw_in=None,
     sFilename_mpas_mesh_netcdf_in=None,
     sFilename_jigsaw_mesh_netcdf_in=None,
@@ -52,6 +53,7 @@ def create_mpas_mesh(
         iFlag_arctic_in (int): 1 to process Arctic region only. Default 0.
         iFlag_fill_hole_in (int): Reserved for future use.
         pBoundary_in (str): WKT string of the domain boundary polygon.
+        sFilename_mesh_boundary_in (str): Path to mesh boundary vector file (used if pBoundary_in is None).
         sWorkspace_jigsaw_in (str): Path to JIGSAW workspace directory.
         sFilename_mpas_mesh_netcdf_in (str): Path to existing MPAS NetCDF mesh file.
         sFilename_jigsaw_mesh_netcdf_in (str): Path to JIGSAW output NetCDF file.
@@ -99,13 +101,22 @@ def create_mpas_mesh(
     else:
         pass
 
-    if pBoundary_in is None:
-        pBoundary = None
-    else:
+    if pBoundary_in is not None:
         # for the reason that a geometry object will be crash if the associated dataset is closed, we must pass wkt string
         # https://gdal.org/api/python_gotchas.html
         pBoundary = ogr.CreateGeometryFromWkt(pBoundary_in)
-        # pBoundary = pBoundary_in #only works for shapely geometry object
+    elif sFilename_mesh_boundary_in is not None and os.path.exists(
+        sFilename_mesh_boundary_in
+    ):
+        from pyearthmesh.config.workflows.mpas_workflow import MPASWorkflow
+
+        wkt = MPASWorkflow._boundary_wkt_from_geojson(sFilename_mesh_boundary_in)
+        if wkt:
+            pBoundary = ogr.CreateGeometryFromWkt(wkt)
+        else:
+            pBoundary = None
+    else:
+        pBoundary = None
 
     if os.path.exists(sFilename_output_in):
         os.remove(sFilename_output_in)

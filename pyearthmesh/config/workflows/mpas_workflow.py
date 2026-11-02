@@ -46,6 +46,7 @@ class MPASWorkflow(BaseWorkflow):
             "paths": {
                 "input_workspace": "",
                 "output_workspace": "./output",
+                "boundary_file": "",
                 "region_geometry": "",
                 "dam_vector": "",
             },
@@ -96,8 +97,52 @@ class MPASWorkflow(BaseWorkflow):
         if output_workspace is not None:
             config["sWorkspace_output"] = output_workspace
 
-        region_geometry = region.get("geometry") or paths.get("region_geometry")
-        boundary_wkt = cls._boundary_wkt_from_geojson(region_geometry)
+        boundary_file = (
+            paths.get("boundary_file")
+            or paths.get("mesh_boundary")
+            or paths.get("boundary_vector")
+            or region.get("boundary_file")
+            or paths.get("watershed_boundary_vector")
+            or region.get("geometry")
+            or paths.get("region_geometry")
+        )
+        config["sFilename_mesh_boundary"] = boundary_file or None
+        config["sFilename_boundary"] = boundary_file or None
+
+        boundary_wkt = None
+        if region.get("wkt"):
+            boundary_wkt = region["wkt"]
+        elif boundary_file:
+            boundary_wkt = cls._boundary_wkt_from_geojson(boundary_file)
+        elif not bool(config.get("iFlag_global", 1)):
+            lon_left = region.get("longitude_left")
+            lon_right = region.get("longitude_right")
+            lat_bot = region.get("latitude_bot")
+            lat_top = region.get("latitude_top")
+            if (
+                lon_left is not None
+                and lon_right is not None
+                and lat_bot is not None
+                and lat_top is not None
+                and not (
+                    float(lon_left) == -180.0
+                    and float(lon_right) == 180.0
+                    and float(lat_bot) == -90.0
+                    and float(lat_top) == 90.0
+                )
+            ):
+                from osgeo import ogr
+
+                pRing = ogr.Geometry(ogr.wkbLinearRing)
+                pRing.AddPoint(float(lon_left), float(lat_top))
+                pRing.AddPoint(float(lon_right), float(lat_top))
+                pRing.AddPoint(float(lon_right), float(lat_bot))
+                pRing.AddPoint(float(lon_left), float(lat_bot))
+                pRing.AddPoint(float(lon_left), float(lat_top))
+                pPoly = ogr.Geometry(ogr.wkbPolygon)
+                pPoly.AddGeometry(pRing)
+                boundary_wkt = pPoly.ExportToWkt()
+
         config["pBoundary_wkt"] = boundary_wkt
         config["iFlag_global"] = 0 if boundary_wkt else 1
 
@@ -188,6 +233,8 @@ class MPASWorkflow(BaseWorkflow):
             "watershed_boundary_raster": "sFilename_watershed_boundary_raster",
             "lake_boundary_vector": "sFilename_lake_boundary_vector",
             "lake_boundary_raster": "sFilename_lake_boundary_raster",
+            "boundary_file": "sFilename_mesh_boundary",
+            "mesh_boundary": "sFilename_mesh_boundary",
         }
         for path_key, config_key in feature_files.items():
             value = paths.get(path_key) or features.get(path_key)

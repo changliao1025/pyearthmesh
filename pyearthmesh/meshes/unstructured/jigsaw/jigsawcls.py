@@ -270,6 +270,8 @@ class jigsawcase:
             + " iFlag_global_in=oJigsaw.iFlag_global,"
             + " iFlag_save_mesh_in=oJigsaw.iFlag_save_mesh,"
             + " iFlag_run_jigsaw_in=1,"
+            + " pBoundary_in=getattr(oJigsaw, 'pBoundary_wkt', None),"
+            + " sFilename_mesh_boundary_in=getattr(oJigsaw, 'sFilename_mesh_boundary', getattr(oJigsaw, 'sFilename_boundary', None)),"
             + " sWorkspace_jigsaw_in=oJigsaw.sWorkspace_output,"
             + " sFilename_mpas_mesh_netcdf_in=oJigsaw.sFilename_mpas_mesh_netcdf,"
             + " sFilename_jigsaw_mesh_netcdf_in=oJigsaw.sFilename_jigsaw_mesh_netcdf,"

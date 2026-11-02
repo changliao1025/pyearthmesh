@@ -18,6 +18,8 @@ class mpascase(BaseCase):
     """Class to represent a mesh run case with configuration and file paths"""
     iFlag_save_mesh = 1
     sFilename_land_ocean_mask = None
+    sFilename_mesh_boundary = None
+    sFilename_boundary = None
     pBoundary_wkt = None
     aConfig_mesh = None
 
@@ -63,6 +65,16 @@ class mpascase(BaseCase):
 
         if "sFilename_land_ocean_mask" in aConfig_in:
             self.sFilename_land_ocean_mask = aConfig_in["sFilename_land_ocean_mask"]
+
+        if "sFilename_mesh_boundary" in aConfig_in:
+            self.sFilename_mesh_boundary = aConfig_in["sFilename_mesh_boundary"]
+        elif "sFilename_boundary" in aConfig_in:
+            self.sFilename_mesh_boundary = aConfig_in["sFilename_boundary"]
+        elif "sFilename_boundary_vector" in aConfig_in:
+            self.sFilename_mesh_boundary = aConfig_in["sFilename_boundary_vector"]
+        else:
+            self.sFilename_mesh_boundary = None
+        self.sFilename_boundary = self.sFilename_mesh_boundary
 
         if "pBoundary_wkt" in aConfig_in:
             self.pBoundary_wkt = aConfig_in["pBoundary_wkt"]
@@ -217,6 +229,7 @@ class mpascase(BaseCase):
                 iFlag_antarctic_in=self.iFlag_antarctic,
                 iFlag_arctic_in=self.iFlag_arctic,
                 pBoundary_in=self.pBoundary_wkt,
+                sFilename_mesh_boundary_in=self.sFilename_mesh_boundary,
                 sWorkspace_jigsaw_in=sWorkspace_jigsaw,
                 sFilename_mpas_mesh_netcdf_in=self.sFilename_mpas_mesh_netcdf,
                 sFilename_jigsaw_mesh_netcdf_in=self.sFilename_jigsaw_mesh_netcdf,

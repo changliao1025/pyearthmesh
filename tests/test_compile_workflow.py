@@ -61,6 +61,21 @@ def test_compile_workflow_passes_jigsaw_input_files():
     assert config["sFilename_watershed_boundary_raster"] == "watershed_boundary.tif"
 
 
+def test_compile_workflow_boundary_file():
+    config = compile_workflow(
+        {
+            "workflow": {"mesh_type": "mpas"},
+            "paths": {
+                "output_workspace": "./output",
+                "boundary_file": "watershed_boundary.geojson",
+            },
+        }
+    )
+
+    assert config["sFilename_mesh_boundary"] == "watershed_boundary.geojson"
+    assert config["sFilename_boundary"] == "watershed_boundary.geojson"
+
+
 def test_compile_workflow_passes_jigsaw_flags_and_controls():
     config = compile_workflow(
         {
