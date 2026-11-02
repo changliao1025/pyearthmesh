@@ -67,7 +67,7 @@ def test_compile_workflow_boundary_file():
             "workflow": {"mesh_type": "mpas"},
             "paths": {
                 "output_workspace": "./output",
-                "boundary_file": "watershed_boundary.geojson",
+                "mesh_boundary_file": "watershed_boundary.geojson",
             },
         }
     )

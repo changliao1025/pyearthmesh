@@ -46,7 +46,7 @@ class MPASWorkflow(BaseWorkflow):
             "paths": {
                 "input_workspace": "",
                 "output_workspace": "./output",
-                "boundary_file": "",
+                "mesh_boundary_file": "",
                 "region_geometry": "",
                 "dam_vector": "",
             },
@@ -98,8 +98,9 @@ class MPASWorkflow(BaseWorkflow):
             config["sWorkspace_output"] = output_workspace
 
         boundary_file = (
-            paths.get("boundary_file")
+            paths.get("mesh_boundary_file")
             or paths.get("mesh_boundary")
+            or paths.get("boundary_file")
             or paths.get("boundary_vector")
             or region.get("boundary_file")
             or paths.get("watershed_boundary_vector")
@@ -233,8 +234,9 @@ class MPASWorkflow(BaseWorkflow):
             "watershed_boundary_raster": "sFilename_watershed_boundary_raster",
             "lake_boundary_vector": "sFilename_lake_boundary_vector",
             "lake_boundary_raster": "sFilename_lake_boundary_raster",
-            "boundary_file": "sFilename_mesh_boundary",
+            "mesh_boundary_file": "sFilename_mesh_boundary",
             "mesh_boundary": "sFilename_mesh_boundary",
+            "boundary_file": "sFilename_mesh_boundary",
         }
         for path_key, config_key in feature_files.items():
             value = paths.get(path_key) or features.get(path_key)

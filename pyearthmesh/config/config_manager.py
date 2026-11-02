@@ -45,9 +45,10 @@ DEFAULT_CONFIG: dict[str, dict[str, Any]] = {
     "paths": {
         "input_workspace": "",
         "output_workspace": "./output",
+        "mesh_boundary_file": "",
+        "mesh_boundary": "",
         "boundary_file": "",
         "boundary_vector": "",
-        "mesh_boundary": "",
         "region_geometry": "",
         "dam_vector": "",
         "city_vector": "",
@@ -353,9 +354,10 @@ def _workflow_spec_from_config(config: dict[str, Any], mesh_type: str) -> Workfl
     region = dict(config.get("region", {}) or {})
     region.setdefault("geometry", paths.get("region_geometry"))
     boundary_file = (
-        paths.get("boundary_file")
-        or paths.get("boundary_vector")
+        paths.get("mesh_boundary_file")
         or paths.get("mesh_boundary")
+        or paths.get("boundary_file")
+        or paths.get("boundary_vector")
     )
     if boundary_file:
         region.setdefault("boundary_file", boundary_file)
