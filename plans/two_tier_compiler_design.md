@@ -180,8 +180,6 @@ workflow:
   mesh_type: mpas                                 # Target mesh family
   case_index: 1
   model: jigsaw                                   # Backend generator
-  simplify_hydrosheds_river_network: false        # River geometry simplification
-  process_coastline: false                        # Coastline masking
   debug: true
   largest_outlets: 10                             # Basin outlets to retain
   run_on_hpc: false                               # Set true for SLURM batch scripts

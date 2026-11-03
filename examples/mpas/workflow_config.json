@@ -4,8 +4,6 @@
     "mesh_type": "mpas",
     "case_index": 1,
     "model": "jigsaw",
-    "simplify_hydrosheds_river_network": false,
-    "process_coastline": false,
     "debug": true,
     "largest_outlets": 10,
     "run_on_hpc": false
