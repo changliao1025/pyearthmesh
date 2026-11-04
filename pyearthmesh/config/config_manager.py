@@ -328,6 +328,107 @@ def dump_workflow_config(
         raise ValueError(f"Unsupported format {fmt!r}. Expected 'yaml' or 'json'.")
 
 
+def create_model_configuration(
+    filename: str | Path,
+    mesh_type: str = "mpas",
+    case_index: int = 1,
+    date: str | None = None,
+    resolution_meter: float | None = None,
+    resolution_degree: float | None = None,
+    workspace_input: str | Path | None = None,
+    workspace_output: str | Path | None = None,
+    region: dict[str, Any] | None = None,
+    fmt: str | None = None,
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """Generate a PyEarthMesh template configuration file in YAML or JSON.
+
+    Supports:
+        - YAML (.yaml / .yml): human-friendly, sectioned format with comments
+        - JSON (.json): programmatic format
+        - Automatic format detection via file extension or fmt parameter
+
+    Args:
+        filename (str | Path): Destination configuration file path.
+        mesh_type (str): Target mesh type (e.g. 'mpas', 'hexagon', 'square', 'latlon', 'tin').
+        case_index (int): Case index number.
+        date (str | None): Simulation run date (YYYYMMDD). Defaults to today.
+        resolution_meter (float | None): Resolution in meters.
+        resolution_degree (float | None): Resolution in degrees.
+        workspace_input (str | Path | None): Input workspace directory.
+        workspace_output (str | Path | None): Output workspace directory.
+        region (dict[str, Any] | None): Region definition dictionary (e.g. bbox).
+        fmt (str | None): Target format ('yaml' or 'json'). Inferred from extension if None.
+        **kwargs: Additional section overrides or configuration parameters.
+
+    Returns:
+        dict[str, Any]: The configuration dictionary written to disk.
+    """
+    import copy
+    from datetime import datetime
+
+    dest = Path(filename).expanduser().resolve()
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
+    if fmt is None:
+        ext = dest.suffix.lower()
+        fmt = "json" if ext == ".json" else "yaml"
+    else:
+        fmt = fmt.lower()
+
+    date_str = date or datetime.now().strftime("%Y%m%d")
+    ws_in = str(workspace_input) if workspace_input else ""
+    ws_out = str(workspace_output) if workspace_output else "./output"
+
+    config_data = copy.deepcopy(DEFAULT_CONFIG)
+    config_data["workflow"]["mesh_type"] = mesh_type.lower()
+    config_data["workflow"]["case_index"] = int(case_index)
+    config_data["workflow"]["date"] = date_str
+
+    if resolution_meter is not None:
+        config_data["resolutions"]["meter"] = float(resolution_meter)
+    if resolution_degree is not None:
+        config_data["resolutions"]["degree"] = float(resolution_degree)
+
+    config_data["paths"]["workspace_input"] = ws_in
+    config_data["paths"]["input_workspace"] = ws_in
+    config_data["paths"]["workspace_output"] = ws_out
+    config_data["paths"]["output_workspace"] = ws_out
+
+    if region is not None and isinstance(region, dict):
+        config_data["region"].update(region)
+
+    for k, v in kwargs.items():
+        if (
+            k in config_data
+            and isinstance(config_data[k], dict)
+            and isinstance(v, dict)
+        ):
+            config_data[k].update(v)
+        else:
+            matched = False
+            for section in (
+                "workflow",
+                "resolutions",
+                "flags",
+                "paths",
+                "region",
+                "features",
+            ):
+                if k in config_data[section]:
+                    config_data[section][k] = v
+                    matched = True
+                    break
+            if not matched:
+                config_data.setdefault("custom", {})[k] = v
+
+    dump_workflow_config(config_data, dest, fmt=fmt)
+    return config_data
+
+
+create_mesh_template_configuration_file = create_model_configuration
+
+
 # ==============================================================================
 # Workflow factory
 #
