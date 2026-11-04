@@ -90,7 +90,7 @@ class mpascase(BaseCase):
         else:
             self.iFlag_arctic = 0
 
-        # Domain extent (used when not in a polar domain)
+        # Domain extent and resolution parameters
         if "dLatitude_top" in aConfig_in:
             self.dLatitude_top = float(aConfig_in["dLatitude_top"])
         else:
@@ -110,6 +110,74 @@ class mpascase(BaseCase):
             self.dLongitude_right = float(aConfig_in["dLongitude_right"])
         else:
             self.dLongitude_right = 180.0
+
+        if "dLatitude_mean" in aConfig_in and aConfig_in["dLatitude_mean"] is not None:
+            self.dLatitude_mean = float(aConfig_in["dLatitude_mean"])
+        else:
+            self.dLatitude_mean = 0.5 * (self.dLatitude_bot + self.dLatitude_top)
+
+        if (
+            "dLongitude_mean" in aConfig_in
+            and aConfig_in["dLongitude_mean"] is not None
+        ):
+            self.dLongitude_mean = float(aConfig_in["dLongitude_mean"])
+        else:
+            self.dLongitude_mean = 0.5 * (self.dLongitude_left + self.dLongitude_right)
+
+        if (
+            "dResolution_meter" in aConfig_in
+            and aConfig_in["dResolution_meter"] is not None
+        ):
+            self.dResolution_meter = float(aConfig_in["dResolution_meter"])
+        else:
+            self.dResolution_meter = None
+
+        if (
+            "dResolution_degree" in aConfig_in
+            and aConfig_in["dResolution_degree"] is not None
+        ):
+            self.dResolution_degree = float(aConfig_in["dResolution_degree"])
+        else:
+            self.dResolution_degree = None
+
+        # Convert between meter and degree if one is missing and mean latitude is available
+        if self.dResolution_degree is not None and self.dResolution_meter is None:
+            try:
+                from pyearth.gis.spatialref.convert_between_degree_and_meter import (
+                    degree_to_meter,
+                )
+
+                self.dResolution_meter = degree_to_meter(
+                    self.dResolution_degree, self.dLatitude_mean
+                )
+            except Exception:
+                pass
+        elif self.dResolution_meter is not None and self.dResolution_degree is None:
+            try:
+                from pyearth.gis.spatialref.convert_between_degree_and_meter import (
+                    meter_to_degree,
+                )
+
+                self.dResolution_degree = meter_to_degree(
+                    self.dResolution_meter, self.dLatitude_mean
+                )
+            except Exception:
+                pass
+
+        if "iFlag_use_mesh_dem" in aConfig_in:
+            self.iFlag_use_mesh_dem = int(aConfig_in["iFlag_use_mesh_dem"])
+        else:
+            self.iFlag_use_mesh_dem = 0
+
+        if "iFlag_mesh_boundary" in aConfig_in:
+            self.iFlag_mesh_boundary = int(aConfig_in["iFlag_mesh_boundary"])
+        else:
+            self.iFlag_mesh_boundary = 1 if self.sFilename_mesh_boundary else 0
+
+        if "iFlag_land_ocean_mask" in aConfig_in:
+            self.iFlag_land_ocean_mask = int(aConfig_in["iFlag_land_ocean_mask"])
+        else:
+            self.iFlag_land_ocean_mask = 1 if self.sFilename_land_ocean_mask else 0
 
         self.sModel = "mpas"
 
@@ -179,18 +247,53 @@ class mpascase(BaseCase):
 
         return
 
+    def get_boundary_wkt(self) -> str | None:
+        """Resolve the domain boundary as a WKT polygon string.
+
+        Resolution order:
+        1. Explicit ``pBoundary_wkt`` in configuration or attribute.
+        2. Vector boundary file (``sFilename_mesh_boundary`` / ``sFilename_boundary``)
+           when ``iFlag_mesh_boundary`` is enabled or vector file is present.
+        3. Regional bounding box (``dLongitude_left``, ``dLongitude_right``,
+           ``dLatitude_bot``, ``dLatitude_top``) when not a global domain.
+        4. None (for global mesh).
+        """
+        if self.pBoundary_wkt:
+            return self.pBoundary_wkt
+
+        from pyearthmesh.meshes.generate_mesh import determine_mesh_boundary
+
+        boundary_file = self.sFilename_mesh_boundary or self.sFilename_boundary
+        wkt, extent = determine_mesh_boundary(
+            pBoundary_wkt=self.pBoundary_wkt,
+            sFilename_mesh_boundary=boundary_file,
+            iFlag_mesh_boundary=getattr(self, "iFlag_mesh_boundary", 0),
+            dLongitude_left=self.dLongitude_left,
+            dLongitude_right=self.dLongitude_right,
+            dLatitude_bot=self.dLatitude_bot,
+            dLatitude_top=self.dLatitude_top,
+            iFlag_global=getattr(self, "iFlag_global", 1),
+        )
+        if wkt:
+            self.pBoundary_wkt = wkt
+        if extent:
+            self.dLongitude_left = extent[0]
+            self.dLongitude_right = extent[1]
+            self.dLatitude_bot = extent[2]
+            self.dLatitude_top = extent[3]
+            self.dLongitude_mean = 0.5 * (extent[0] + extent[1])
+            self.dLatitude_mean = 0.5 * (extent[2] + extent[3])
+        return self.pBoundary_wkt
+
     def run(self):
         """Run the MPAS mesh generation workflow.
 
-        Follows the same boundary-selection logic as pyflowline's
-        ``pyflowline_mesh_generation``:
-
+        Follows unified boundary-selection logic:
         * If ``iFlag_antarctic == 1`` **or** ``iFlag_arctic == 1``, the polar
           domain is handled internally by ``create_mpas_mesh`` — no
           ``pBoundary_wkt`` is passed.
-        * Otherwise the boundary WKT stored in ``self.pBoundary_wkt`` (read
-          from the configuration file) is forwarded directly to
-          ``create_mpas_mesh``.
+        * Otherwise the boundary WKT resolved by ``get_boundary_wkt()`` (vector
+          file, explicit WKT, or bounding box) is forwarded to ``create_mpas_mesh``.
         """
         from pyearthmesh.meshes.unstructured.mpas.create_mpas_mesh import (
             create_mpas_mesh,
@@ -206,36 +309,32 @@ class mpascase(BaseCase):
         )
 
         if self.iFlag_antarctic == 1 or self.iFlag_arctic == 1:
-            # Polar domain: let create_mpas_mesh handle the boundary internally
-            self.aMpas = create_mpas_mesh(
-                self.sFilename_mesh,
-                iFlag_global_in=self.iFlag_global,
-                iFlag_save_mesh_in=self.iFlag_save_mesh,
-                iFlag_run_jigsaw_in=self.iFlag_run_jigsaw,
-                iFlag_antarctic_in=self.iFlag_antarctic,
-                iFlag_arctic_in=self.iFlag_arctic,
-                sWorkspace_jigsaw_in=sWorkspace_jigsaw,
-                sFilename_mpas_mesh_netcdf_in=self.sFilename_mpas_mesh_netcdf,
-                sFilename_jigsaw_mesh_netcdf_in=self.sFilename_jigsaw_mesh_netcdf,
-                aConfig_jigsaw_in=aConfig_jigsaw,
-            )
+            pBoundary_wkt = None
         else:
-            # Non-polar domain: use pBoundary_wkt from config
-            self.aMpas = create_mpas_mesh(
-                self.sFilename_mesh,
-                iFlag_global_in=self.iFlag_global,
-                iFlag_save_mesh_in=self.iFlag_save_mesh,
-                iFlag_run_jigsaw_in=self.iFlag_run_jigsaw,
-                iFlag_antarctic_in=self.iFlag_antarctic,
-                iFlag_arctic_in=self.iFlag_arctic,
-                pBoundary_in=self.pBoundary_wkt,
-                sFilename_mesh_boundary_in=self.sFilename_mesh_boundary,
-                sWorkspace_jigsaw_in=sWorkspace_jigsaw,
-                sFilename_mpas_mesh_netcdf_in=self.sFilename_mpas_mesh_netcdf,
-                sFilename_jigsaw_mesh_netcdf_in=self.sFilename_jigsaw_mesh_netcdf,
-                sFilename_land_ocean_mask_in=self.sFilename_land_ocean_mask,
-                aConfig_jigsaw_in=aConfig_jigsaw,
-            )
+            pBoundary_wkt = self.get_boundary_wkt()
+
+        sFilename_land_ocean_mask = (
+            self.sFilename_land_ocean_mask
+            if getattr(self, "iFlag_land_ocean_mask", 0) == 1
+            else None
+        )
+
+        self.aMpas = create_mpas_mesh(
+            self.sFilename_mesh,
+            iFlag_global_in=self.iFlag_global,
+            iFlag_use_mesh_dem_in=self.iFlag_use_mesh_dem,
+            iFlag_save_mesh_in=self.iFlag_save_mesh,
+            iFlag_run_jigsaw_in=self.iFlag_run_jigsaw,
+            iFlag_antarctic_in=self.iFlag_antarctic,
+            iFlag_arctic_in=self.iFlag_arctic,
+            pBoundary_in=pBoundary_wkt,
+            sFilename_mesh_boundary_in=self.sFilename_mesh_boundary,
+            sWorkspace_jigsaw_in=sWorkspace_jigsaw,
+            sFilename_mpas_mesh_netcdf_in=self.sFilename_mpas_mesh_netcdf,
+            sFilename_jigsaw_mesh_netcdf_in=self.sFilename_jigsaw_mesh_netcdf,
+            sFilename_land_ocean_mask_in=sFilename_land_ocean_mask,
+            aConfig_jigsaw_in=aConfig_jigsaw,
+        )
         return self.aMpas
 
     def create_hpc_job(self, slurm=None, hours=10, **kwargs):

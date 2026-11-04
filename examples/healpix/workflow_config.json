@@ -10,9 +10,26 @@
   "resolutions": {
     "meter": 5000
   },
+  "region": {
+    "bbox": {
+      "left": -180.0,
+      "right": 180.0,
+      "bottom": -90.0,
+      "top": 90.0
+    },
+    "wkt": ""
+  },
+  "flags": {
+    "global": true,
+    "mesh_boundary": false,
+    "save_mesh": true,
+    "visualization": false,
+    "use_tiles": true
+  },
   "paths": {
     "output_workspace": "../../data/healpix/5km",
-    "output_mesh": "healpix_mesh.geojson"
+    "output_mesh": "healpix_mesh.geojson",
+    "mesh_boundary": ""
   },
   "features": {
     "use_tiles": true,

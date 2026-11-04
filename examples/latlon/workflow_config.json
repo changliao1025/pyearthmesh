@@ -10,9 +10,17 @@
   "resolutions": {
     "degree": 0.16666666666666666
   },
+  "flags": {
+    "global": false,
+    "mesh_boundary": false,
+    "save_mesh": true,
+    "visualization": false,
+    "rotation": false
+  },
   "paths": {
     "output_workspace": "../../data/qinghaihu",
     "output_mesh": "lake_latlon_20km.geojson",
+    "mesh_boundary": "",
     "region_geometry": ""
   },
   "region": {

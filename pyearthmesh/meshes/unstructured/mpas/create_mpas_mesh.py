@@ -197,15 +197,16 @@ def create_mpas_mesh(
         pass
     else:
         # check whether the jigsaw mesh file exists
-        if sFilename_jigsaw_mesh_netcdf_in is not None:
+        if sFilename_jigsaw_mesh_netcdf_in:
             if os.path.exists(sFilename_jigsaw_mesh_netcdf_in):
                 # can we use the jigsaw mesh to create the mpas mesh?
                 pass
             else:
-                print("JIGSAW Mesh file does not exist!")
+                print("JIGSAW mesh file does not exist!")
         pass
 
     if os.path.exists(sFilename_mpas_mesh_netcdf_in):
+        print("Reuse MPAS mesh file for mesh generation directly!")
         pass
     else:
         print("Mesh file does not exist!")

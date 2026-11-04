@@ -42,11 +42,25 @@ DEFAULT_CONFIG: dict[str, dict[str, Any]] = {
         "dam_km": None,
         "city_km": None,
     },
+    "flags": {
+        "global": False,
+        "mesh_boundary": False,
+        "save_mesh": True,
+        "visualization": False,
+        "rotation": False,
+        "use_tiles": False,
+        "netcdf": False,
+        "check_mesh_quality": False,
+        "convert_to_parquet": False,
+    },
     "paths": {
         "input_workspace": "",
+        "workspace_input": "",
         "output_workspace": "./output",
+        "workspace_output": "./output",
         "mesh_boundary_file": "",
         "mesh_boundary": "",
+        "mesh_netcdf": "",
         "boundary_file": "",
         "boundary_vector": "",
         "region_geometry": "",
@@ -70,6 +84,7 @@ DEFAULT_CONFIG: dict[str, dict[str, Any]] = {
         "longitude_right": None,
         "latitude_bot": None,
         "latitude_top": None,
+        "boundary_file": "",
     },
     "features": {
         "coastline": False,
@@ -138,9 +153,12 @@ DEFAULT_CONFIG: dict[str, dict[str, Any]] = {
 def _merge(
     defaults: dict[str, Any], values: dict[str, Any], section: str
 ) -> dict[str, Any]:
-    unknown = set(values) - set(defaults)
-    if unknown:
-        raise ValueError(f"Unknown {section} setting(s): {', '.join(sorted(unknown))}")
+    if section != "flags":
+        unknown = set(values) - set(defaults)
+        if unknown:
+            raise ValueError(
+                f"Unknown {section} setting(s): {', '.join(sorted(unknown))}"
+            )
     result = defaults.copy()
     result.update(values)
     return result
@@ -351,6 +369,7 @@ def _workflow_spec_from_config(config: dict[str, Any], mesh_type: str) -> Workfl
     """Normalize a loaded sectioned workflow config into the frontend spec."""
     workflow = config.get("workflow", {}) or {}
     paths = config.get("paths", {}) or {}
+    flags = config.get("flags", {}) or {}
     region = dict(config.get("region", {}) or {})
     region.setdefault("geometry", paths.get("region_geometry"))
     boundary_file = (
@@ -370,6 +389,7 @@ def _workflow_spec_from_config(config: dict[str, Any], mesh_type: str) -> Workfl
             "region": region,
             "resolution": config.get("resolutions", {}) or {},
             "paths": paths,
+            "flags": flags,
             "execution": {
                 "debug": workflow.get("debug", False),
                 "model": workflow.get("model", "jigsaw"),

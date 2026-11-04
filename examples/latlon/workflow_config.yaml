@@ -19,12 +19,6 @@ workflow:
 resolutions:
   degree: 0.16666666666666666        # Angular resolution (~20 km cell spacing at equator)
 
-# File and workspace path configurations
-paths:
-  output_workspace: ../../data/qinghaihu   # Output directory (relative to this YAML file)
-  output_mesh: lake_latlon_20km.geojson     # Generated mesh output filename
-  region_geometry: ""                      # Optional vector boundary file (GeoJSON/SHP)
-
 # Geographic extent constraints
 region:
   bbox:                              # Bounding box coordinates in decimal degrees
@@ -33,3 +27,18 @@ region:
     bottom: 36.0                     # Minimum latitude (degrees North)
     top: 37.5                        # Maximum latitude (degrees North)
   wkt: ""                            # Optional Well-Known Text boundary polygon
+
+# Mesh generation and boundary flags
+flags:
+  global: false                      # Regional mesh constrained to bounding box / boundary
+  mesh_boundary: false               # Crop mesh using vector boundary (false = use bbox)
+  save_mesh: true                    # Export mesh to GeoJSON/disk
+  visualization: false               # Enable map visualization output
+  rotation: false                    # Grid orientation rotation
+
+# File and workspace path configurations
+paths:
+  output_workspace: ../../data/qinghaihu   # Output directory (relative to this YAML file)
+  output_mesh: lake_latlon_20km.geojson     # Generated mesh output filename
+  mesh_boundary: ""                        # Vector boundary file (GeoJSON/SHP)
+  region_geometry: ""                      # Optional vector boundary file (GeoJSON/SHP)

@@ -69,6 +69,7 @@ class MPASWorkflow(BaseWorkflow):
             raise TypeError("spec must be a WorkflowSpec or dict")
 
         config = dict(native_config)
+        cls.resolve_boundary_and_flags(spec_data, config)
 
         case_index = spec_data.get("case_index", 1)
         date = spec_data.get("date")
@@ -96,56 +97,6 @@ class MPASWorkflow(BaseWorkflow):
         )
         if output_workspace is not None:
             config["sWorkspace_output"] = output_workspace
-
-        boundary_file = (
-            paths.get("mesh_boundary_file")
-            or paths.get("mesh_boundary")
-            or paths.get("boundary_file")
-            or paths.get("boundary_vector")
-            or region.get("boundary_file")
-            or paths.get("watershed_boundary_vector")
-            or region.get("geometry")
-            or paths.get("region_geometry")
-        )
-        config["sFilename_mesh_boundary"] = boundary_file or None
-        config["sFilename_boundary"] = boundary_file or None
-
-        boundary_wkt = None
-        if region.get("wkt"):
-            boundary_wkt = region["wkt"]
-        elif boundary_file:
-            boundary_wkt = cls._boundary_wkt_from_geojson(boundary_file)
-        elif not bool(config.get("iFlag_global", 1)):
-            lon_left = region.get("longitude_left")
-            lon_right = region.get("longitude_right")
-            lat_bot = region.get("latitude_bot")
-            lat_top = region.get("latitude_top")
-            if (
-                lon_left is not None
-                and lon_right is not None
-                and lat_bot is not None
-                and lat_top is not None
-                and not (
-                    float(lon_left) == -180.0
-                    and float(lon_right) == 180.0
-                    and float(lat_bot) == -90.0
-                    and float(lat_top) == 90.0
-                )
-            ):
-                from osgeo import ogr
-
-                pRing = ogr.Geometry(ogr.wkbLinearRing)
-                pRing.AddPoint(float(lon_left), float(lat_top))
-                pRing.AddPoint(float(lon_right), float(lat_top))
-                pRing.AddPoint(float(lon_right), float(lat_bot))
-                pRing.AddPoint(float(lon_left), float(lat_bot))
-                pRing.AddPoint(float(lon_left), float(lat_top))
-                pPoly = ogr.Geometry(ogr.wkbPolygon)
-                pPoly.AddGeometry(pRing)
-                boundary_wkt = pPoly.ExportToWkt()
-
-        config["pBoundary_wkt"] = boundary_wkt
-        config["iFlag_global"] = 0 if boundary_wkt else 1
 
         # Resolution mapping (all JIGSAW / MPAS resolutions are in kilometres)
         def _get_res(

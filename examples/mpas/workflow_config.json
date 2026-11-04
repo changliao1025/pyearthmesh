@@ -16,18 +16,76 @@
     "lake_boundary_km": 5,
     "watershed_boundary_km": 5
   },
+  "region": {
+    "bbox": {
+      "left": 95.9083,
+      "right": 119.1798,
+      "bottom": 32.1583,
+      "top": 41.8379
+    }
+  },
+  "flags": {
+    "global": false,
+    "mesh_boundary": true,
+    "save_mesh": true,
+    "visualization": false,
+    "rotation": false
+  },
   "paths": {
-    "input_workspace": "/qfs/people/liao313/workspace/python/unified_land_river_mesh/data/global/input",
-    "output_workspace": "/Users/changliao/scratch/earthmesh/mpas",
-    "river_network_vector": "/Users/changliao/data/hexwatershed/qinghaihu/vector/flowline_hydroshed_simplified_clipped_clean.geojson",
-    "river_network_raster": "/Users/changliao/data/hexwatershed/qinghaihu/raster/river_networks.tif",
-    "lake_boundary_vector": "/Users/changliao/data/hexwatershed/qinghaihu/vector/lake_boundary_hydrobasins_qinghaihu.geojson",
-    "lake_boundary_raster": "/Users/changliao/data/hexwatershed/qinghaihu/raster/lake_boundary_mask.tif",
+    "input_workspace": {
+      "Darwin": "/Users/changliao/data/hexwatershed",
+      "Linux": "/qfs/people/liao313/workspace/python/unified_land_river_mesh/data/global/input",
+      "Windows": "D:/data/modeldata/hexwatershed",
+      "default": "./input"
+    },
+    "output_workspace": {
+      "Darwin": "/Users/changliao/scratch/earthmesh/mpas",
+      "Linux": "/data2/share/liaochang/04model/jigsaw/mpas",
+      "Windows": "D:/scratch/04model/jigsaw/mpas",
+      "default": "./output"
+    },
+    "mesh_boundary": {
+      "Darwin": "/Users/changliao/data/hexwatershed/global/vector/region.geojson",
+      "Linux": "/public/home/liaochang/data/hexwatershed/global/vector/region.geojson",
+      "default": "./region.geojson"
+    },
+    "river_network_vector": {
+      "Darwin": "/Users/changliao/data/hexwatershed/qinghaihu/vector/flowline_hydroshed_simplified_clipped_clean.geojson",
+      "Linux": "/public/home/liaochang/data/hexwatershed/qinghaihu/vector/flowline_hydroshed_simplified_clipped_clean.geojson",
+      "default": "./flowline_hydroshed_simplified_clipped_clean.geojson"
+    },
+    "river_network_raster": {
+      "Darwin": "/Users/changliao/data/hexwatershed/qinghaihu/raster/river_networks.tif",
+      "Linux": "/public/home/liaochang/data/hexwatershed/qinghaihu/raster/river_networks.tif",
+      "default": "./river_networks.tif"
+    },
+    "lake_boundary_vector": {
+      "Darwin": "/Users/changliao/data/hexwatershed/qinghaihu/vector/lake_boundary_hydrobasins_qinghaihu.geojson",
+      "Linux": "/public/home/liaochang/data/hexwatershed/qinghaihu/vector/lake_boundary_hydrobasins_qinghaihu.geojson",
+      "default": "./lake_boundary_hydrobasins_qinghaihu.geojson"
+    },
+    "lake_boundary_raster": {
+      "Darwin": "/Users/changliao/data/hexwatershed/qinghaihu/raster/lake_boundary_mask.tif",
+      "Linux": "/public/home/liaochang/data/hexwatershed/qinghaihu/raster/lake_boundary_mask.tif",
+      "default": "./lake_boundary_mask.tif"
+    },
     "watershed_boundary_vector": "",
-    "watershed_boundary_raster": "/Users/changliao/data/hexwatershed/qinghaihu/raster/basin_boundary_mask.tif",
+    "watershed_boundary_raster": {
+      "Darwin": "/Users/changliao/data/hexwatershed/qinghaihu/raster/basin_boundary_mask.tif",
+      "Linux": "/public/home/liaochang/data/hexwatershed/qinghaihu/raster/basin_boundary_mask.tif",
+      "default": "./basin_boundary_mask.tif"
+    },
     "coastline_vector": "",
-    "coastline_raster": "/Users/changliao/scratch/land_ocean_mask_wo_island_buffered_fixed.tif",
-    "region_geometry": "/Users/changliao/data/hexwatershed/global/vector/region.geojson",
+    "coastline_raster": {
+      "Darwin": "/Users/changliao/scratch/land_ocean_mask_wo_island_buffered_fixed.tif",
+      "Linux": "/data2/share/liaochang/04model/jigsaw/global/coastline/land_ocean_mask_wo_island_buffered_fixed.tif",
+      "default": "./land_ocean_mask_wo_island_buffered_fixed.tif"
+    },
+    "region_geometry": {
+      "Darwin": "/Users/changliao/data/hexwatershed/global/vector/region.geojson",
+      "Linux": "/public/home/liaochang/data/hexwatershed/global/vector/region.geojson",
+      "default": "./region.geojson"
+    },
     "dam_vector": ""
   },
   "jigsaw": {

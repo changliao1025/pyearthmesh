@@ -19,10 +19,28 @@ workflow:
 resolutions:
   meter: 5000                        # Target cell diameter / resolution in meters (5 km)
 
+# Geographic extent constraints (global domain by default)
+region:
+  bbox:
+    left: -180.0
+    right: 180.0
+    bottom: -90.0
+    top: 90.0
+  wkt: ""                            # Optional regional boundary polygon
+
+# Mesh generation and boundary flags
+flags:
+  global: true                       # Global spherical pixelization
+  mesh_boundary: false               # Crop mesh using vector boundary (false = global)
+  save_mesh: true                    # Export mesh to GeoJSON/disk
+  visualization: false               # Enable map visualization output
+  use_tiles: true                    # Enable tiled multi-file output
+
 # File and workspace path configurations
 paths:
   output_workspace: ../../data/healpix/5km   # Output directory (relative to this YAML file)
   output_mesh: healpix_mesh.geojson          # Destination mesh GeoJSON filename
+  mesh_boundary: ""                          # Vector boundary file (GeoJSON/SHP)
 
 # Spherical pixelization and tiling features
 features:

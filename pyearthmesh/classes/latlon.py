@@ -361,6 +361,9 @@ class pylatlon(pymeshcell):
 
         return False, None
 
+    # Alias for compatibility with other cell classes
+    which_edge_cross_this_vertex = which_edge_crosses_vertex
+
     def calculate_cell_area(self) -> float:
         """
         Calculate the area of the lat-lon cell using spherical geometry.
@@ -409,6 +412,9 @@ class pylatlon(pymeshcell):
 
         self.dLength = np.sqrt(self.dArea)
         return self.dLength
+
+    # Alias for polymorphic interface with other mesh cell types
+    calculate_edge_length = calculate_effective_length
 
     def shares_edge_with(self, other: "pylatlon") -> bool:
         """
