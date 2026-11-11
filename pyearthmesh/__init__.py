@@ -24,6 +24,11 @@ from pyearthmesh.classes.tin import pytin
 
 # Import main classes
 from pyearthmesh.classes.vertex import pyvertex
+from pyearthmesh.config import (
+    create_model_configuration,
+    create_workflow,
+    load_workflow_config,
+)
 
 __all__ = [
     "pyvertex",
@@ -36,4 +41,7 @@ __all__ = [
     "pympas",
     "pytin",
     "pydggrid",
+    "create_model_configuration",
+    "create_workflow",
+    "load_workflow_config",
 ]

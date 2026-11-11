@@ -8,6 +8,7 @@ workflow specifications.
 from pyearthmesh.config.config_manager import (
     DEFAULT_CONFIG,
     compile_workflow,
+    create_model_configuration,
     create_workflow,
     dump_workflow_config,
     get_available_workflow_types,
@@ -23,6 +24,7 @@ from pyearthmesh.config.workflows.base import (
 __all__ = [
     "DEFAULT_CONFIG",
     "compile_workflow",
+    "create_model_configuration",
     "create_workflow",
     "dump_workflow_config",
     "get_available_workflow_types",
