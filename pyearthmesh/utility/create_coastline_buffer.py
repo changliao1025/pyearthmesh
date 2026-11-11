@@ -1,9 +1,5 @@
 import os
-from typing import Optional
 
-from hexwatershed_utility.preprocess.feature.coastline import (
-    create_land_ocean_mask_from_naturalearth,
-)
 from osgeo import ogr
 
 
@@ -49,6 +45,18 @@ def create_coastline_buffer(
     int
         Number of buffer features created
     """
+    try:
+        from hexwatershed_utility.preprocess.feature.coastline import (
+            create_land_ocean_mask_from_naturalearth,
+        )
+    except ModuleNotFoundError as exc:
+        if exc.name != "hexwatershed_utility":
+            raise
+        raise ModuleNotFoundError(
+            "create_coastline_buffer requires hexwatershed_utility; "
+            "install it separately to use this feature."
+        ) from exc
+
     sWorkspace_output = os.path.dirname(sFilename_out)
     if not sWorkspace_output:
         sWorkspace_output = os.getcwd()
