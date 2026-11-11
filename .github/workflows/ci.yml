@@ -52,7 +52,7 @@ jobs:
 
       - name: Install package and test dependencies
         shell: bash -el {0}
-        run: python -m pip install -e ".[viz,dev]"
+        run: python -m pip install -e ".[dev]"
 
       - name: Run test suite
         shell: bash -el {0}
