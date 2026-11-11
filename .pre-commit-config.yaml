@@ -44,7 +44,7 @@ repos:
     hooks:
       - id: codespell
         args:
-          - --ignore-words-list=aline,hav
+          - --ignore-words-list=aline,hav,scrip
           - --ignore-regex=\b[a-z]+[A-Z][a-zA-Z0-9_]*\b
         exclude: ^(.*\.geojson|.*\.tif|.*\.tiff)$
 
