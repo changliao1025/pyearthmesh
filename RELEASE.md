@@ -41,12 +41,12 @@ twine check dist/*
 ### Step 1: Update Version Number
 Update the version in pyproject.toml:
 ```toml
-version = "0.1.1"  # Change to your new version
+version = "0.1.2"  # Change to your new version
 ```
 
 Also update it in pyearthmesh/__init__.py:
 ```python
-__version__ = "0.1.1"  # Must match pyproject.toml
+__version__ = "0.1.2"  # Must match pyproject.toml
 ```
 
 ### Step 2: Update CHANGELOG
