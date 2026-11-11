@@ -67,10 +67,11 @@ class HealpixWorkflow(BaseWorkflow):
             raise TypeError("spec must be a WorkflowSpec or dict")
 
         config = dict(native_config)
+        cls.resolve_boundary_and_flags(spec, config)
+
         resolution = spec.get("resolution", {}) or {}
         paths = spec.get("paths", {}) or {}
         features = spec.get("features", {}) or {}
-        region = spec.get("region", {}) or {}
 
         resolution_meter = resolution.get("meter") or resolution.get("resolution_meter")
         if resolution_meter is None:
@@ -82,10 +83,10 @@ class HealpixWorkflow(BaseWorkflow):
         config["dResolution_meter"] = float(resolution_meter)
         config["sFilename_mesh"] = paths.get("output_mesh") or "healpix_mesh.geojson"
         config["sWorkspace_output"] = paths.get("output_workspace") or "./output"
-        config["pBoundary_wkt"] = region.get("wkt")
-        config["iFlag_global"] = int(not bool(config["pBoundary_wkt"]))
 
-        use_tiles = bool(features.get("use_tiles", False))
+        use_tiles = bool(
+            config.get("iFlag_use_tiles") or features.get("use_tiles", False)
+        )
         config["iFlag_use_tiles"] = int(use_tiles)
         config["tile_mode"] = features.get("tile_mode", "simple")
         config["nTile"] = features.get("nTile")
@@ -93,6 +94,7 @@ class HealpixWorkflow(BaseWorkflow):
         config["tiles_per_base"] = features.get("tiles_per_base")
         config["iFlag_netcdf"] = int(
             str(config["sFilename_mesh"]).lower().endswith(".nc")
+            or config.get("iFlag_netcdf", 0)
         )
         return config
 

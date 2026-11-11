@@ -12,7 +12,8 @@ dependencies:
   - jigsaw
   - jigsawpy
   - mpas-tools
-  - pyearth
+  - pyearth>=0.2.5
+  - pyyaml
   - pip
   - pip:
     - -e .[docs,dev]

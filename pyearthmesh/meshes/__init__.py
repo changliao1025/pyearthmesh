@@ -1,5 +1,9 @@
 """PyEarthMesh meshes module."""
 
+from pyearthmesh.meshes.generate_mesh import (
+    determine_mesh_boundary,
+    generate_mesh,
+)
 from pyearthmesh.meshes.structured import (
     create_cubicsphere_mesh,
     create_dggrid_mesh,
@@ -12,6 +16,8 @@ from pyearthmesh.meshes.structured import (
 from pyearthmesh.meshes.unstructured import *
 
 __all__ = [
+    "determine_mesh_boundary",
+    "generate_mesh",
     "create_hexagon_mesh",
     "create_square_mesh",
     "create_latlon_mesh",

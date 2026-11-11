@@ -10,12 +10,30 @@
   "resolutions": {
     "meter": 10000.0
   },
+  "region": {
+    "bbox": {
+      "left": -180.0,
+      "right": 180.0,
+      "bottom": -90.0,
+      "top": 90.0
+    },
+    "wkt": ""
+  },
+  "flags": {
+    "global": true,
+    "mesh_boundary": false,
+    "save_mesh": true,
+    "visualization": false,
+    "use_tiles": true,
+    "convert_to_parquet": true
+  },
   "paths": {
     "output_workspace": {
       "Linux": "/compyfs/liao313/04model/pyearthmesh/rhealpix/10km",
       "default": "./output/rhealpix/10km"
     },
-    "output_mesh": "rhealpix_mesh.geojson"
+    "output_mesh": "rhealpix_mesh.geojson",
+    "mesh_boundary": ""
   },
   "features": {
     "use_tiles": true,

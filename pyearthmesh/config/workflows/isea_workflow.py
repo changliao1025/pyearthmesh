@@ -97,10 +97,11 @@ class ISEAWorkflow(BaseWorkflow):
             raise TypeError("spec must be a WorkflowSpec or dict")
 
         config = dict(native_config)
+        cls.resolve_boundary_and_flags(spec, config)
+
         resolution = spec.get("resolution", {}) or {}
         paths = spec.get("paths", {}) or {}
         features = spec.get("features", {}) or {}
-        region = spec.get("region", {}) or {}
 
         resolution_meter = resolution.get("meter") or resolution.get("resolution_meter")
         if resolution_meter is None and resolution.get("ocean_km") is not None:
@@ -127,10 +128,10 @@ class ISEAWorkflow(BaseWorkflow):
         config["dResolution_meter"] = float(resolution_meter)
         config["sFilename_mesh"] = paths.get("output_mesh") or "isea_mesh.geojson"
         config["sWorkspace_output"] = paths.get("output_workspace") or "./output"
-        config["pBoundary_wkt"] = region.get("wkt")
-        config["iFlag_global"] = int(not bool(config["pBoundary_wkt"]))
 
-        use_tiles = bool(features.get("use_tiles", False))
+        use_tiles = bool(
+            config.get("iFlag_use_tiles") or features.get("use_tiles", False)
+        )
         config["iFlag_use_tiles"] = int(use_tiles)
         config["tile_mode"] = features.get("tile_mode", "simple")
         config["nTile"] = features.get("nTile")
@@ -138,9 +139,16 @@ class ISEAWorkflow(BaseWorkflow):
         config["tiles_per_base"] = features.get("tiles_per_base")
         config["iFlag_netcdf"] = int(
             str(config["sFilename_mesh"]).lower().endswith(".nc")
+            or config.get("iFlag_netcdf", 0)
         )
-        config["convert_to_parquet"] = bool(features.get("convert_to_parquet", False))
-        config["check_mesh_quality"] = bool(features.get("check_mesh_quality", False))
+        config["convert_to_parquet"] = bool(
+            config.get("convert_to_parquet")
+            or features.get("convert_to_parquet", False)
+        )
+        config["check_mesh_quality"] = bool(
+            config.get("check_mesh_quality")
+            or features.get("check_mesh_quality", False)
+        )
         return config
 
     def validate(self) -> None:

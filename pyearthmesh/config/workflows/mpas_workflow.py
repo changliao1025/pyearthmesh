@@ -46,7 +46,7 @@ class MPASWorkflow(BaseWorkflow):
             "paths": {
                 "input_workspace": "",
                 "output_workspace": "./output",
-                "hydrosheds_rivers": "",
+                "mesh_boundary_file": "",
                 "region_geometry": "",
                 "dam_vector": "",
             },
@@ -69,6 +69,7 @@ class MPASWorkflow(BaseWorkflow):
             raise TypeError("spec must be a WorkflowSpec or dict")
 
         config = dict(native_config)
+        cls.resolve_boundary_and_flags(spec_data, config)
 
         case_index = spec_data.get("case_index", 1)
         date = spec_data.get("date")
@@ -96,11 +97,6 @@ class MPASWorkflow(BaseWorkflow):
         )
         if output_workspace is not None:
             config["sWorkspace_output"] = output_workspace
-
-        region_geometry = region.get("geometry") or paths.get("region_geometry")
-        boundary_wkt = cls._boundary_wkt_from_geojson(region_geometry)
-        config["pBoundary_wkt"] = boundary_wkt
-        config["iFlag_global"] = 0 if boundary_wkt else 1
 
         # Resolution mapping (all JIGSAW / MPAS resolutions are in kilometres)
         def _get_res(
@@ -170,14 +166,6 @@ class MPASWorkflow(BaseWorkflow):
             if key not in excluded_keys:
                 config[key] = value
 
-        river_vector = paths.get("hydrosheds_rivers") or features.get(
-            "hydrosheds_rivers"
-        )
-        if river_vector:
-            config["sFilename_river_network_vector"] = river_vector
-            config["iFlag_geom_river_network"] = True
-            config["iFlag_spac_river_network"] = True
-
         dam_vector = paths.get("dam_vector") or features.get("dam_vector")
         if dam_vector:
             config["sFilename_dam_vector"] = dam_vector
@@ -197,6 +185,9 @@ class MPASWorkflow(BaseWorkflow):
             "watershed_boundary_raster": "sFilename_watershed_boundary_raster",
             "lake_boundary_vector": "sFilename_lake_boundary_vector",
             "lake_boundary_raster": "sFilename_lake_boundary_raster",
+            "mesh_boundary_file": "sFilename_mesh_boundary",
+            "mesh_boundary": "sFilename_mesh_boundary",
+            "boundary_file": "sFilename_mesh_boundary",
         }
         for path_key, config_key in feature_files.items():
             value = paths.get(path_key) or features.get(path_key)

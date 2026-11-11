@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyearthmesh"
-version = "0.1.1"
+version = "0.1.2"
 description = "A lightweight mesh generation and manipulation package for Earth science applications"
 readme = "README.md"
 authors = [
@@ -30,7 +30,8 @@ keywords = ["mesh", "GIS", "earth science", "DGGS", "hexagon", "TIN", "MPAS", "s
 requires-python = ">=3.8"
 dependencies = [
     "numpy>=1.20.0",
-    "pyearth>=0.2.1",
+    "pyearth>=0.2.5",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]

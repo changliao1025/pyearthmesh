@@ -3,6 +3,8 @@ import pytest
 from pyearthmesh.config.config_manager import (
     compile_workflow,
     create_workflow,
+    dump_workflow_config,
+    load_workflow_config,
 )
 
 
@@ -57,6 +59,21 @@ def test_compile_workflow_passes_jigsaw_input_files():
     assert config["sFilename_river_network_raster"] == "river_network.tif"
     assert config["sFilename_lake_boundary_vector"] == "lake_boundary.geojson"
     assert config["sFilename_watershed_boundary_raster"] == "watershed_boundary.tif"
+
+
+def test_compile_workflow_boundary_file():
+    config = compile_workflow(
+        {
+            "workflow": {"mesh_type": "mpas"},
+            "paths": {
+                "output_workspace": "./output",
+                "mesh_boundary_file": "watershed_boundary.geojson",
+            },
+        }
+    )
+
+    assert config["sFilename_mesh_boundary"] == "watershed_boundary.geojson"
+    assert config["sFilename_boundary"] == "watershed_boundary.geojson"
 
 
 def test_compile_workflow_passes_jigsaw_flags_and_controls():
@@ -523,3 +540,162 @@ def test_mpas_case_hpc_job_preserves_cwd(tmp_path):
     assert (
         os.getcwd() == initial_cwd
     ), "_mpas_create_hpc_job must not mutate os.getcwd()"
+
+
+def test_yaml_workflow_loading_with_comments(tmp_path):
+    yaml_content = """# Top-level comment
+workflow:
+  date: "20261031" # Inline comment for date
+  mesh_type: latlon # Target regular mesh
+  case_index: 3
+  model: latlon
+  debug: true
+
+# Resolution block
+resolutions:
+  degree: 0.25 # quarter degree
+
+# Output path block
+paths:
+  output_workspace: ./test_latlon_out # Workspace directory
+  output_mesh: latlon_mesh.geojson
+
+region:
+  bbox:
+    left: 100.0
+    right: 110.0
+    bottom: 20.0
+    top: 30.0
+"""
+    yaml_file = tmp_path / "custom_workflow.yaml"
+    yaml_file.write_text(yaml_content, encoding="utf-8")
+
+    config = load_workflow_config(yaml_file)
+    assert config["workflow"]["mesh_type"] == "latlon"
+    assert config["workflow"]["date"] == "20261031"
+    assert config["workflow"]["case_index"] == 3
+    assert config["resolutions"]["degree"] == 0.25
+    assert config["region"]["bbox"]["left"] == 100.0
+
+    compiled = compile_workflow(yaml_file)
+    assert compiled["mesh_type"] == "latlon"
+    assert compiled["dResolution_degree"] == 0.25
+    assert compiled["ncolumn"] == 40
+    assert compiled["nrow"] == 40
+
+
+def test_yaml_and_json_parity_for_examples():
+    from pathlib import Path
+
+    base_examples = Path(__file__).resolve().parent.parent / "examples"
+    mesh_families = ["latlon", "mpas", "healpix", "isea", "rhealpix"]
+
+    for mesh in mesh_families:
+        yaml_path = base_examples / mesh / "workflow_config.yaml"
+        json_path = base_examples / mesh / "workflow_config.json"
+
+        assert yaml_path.is_file(), f"Missing {yaml_path}"
+        assert json_path.is_file(), f"Missing {json_path}"
+
+        config_yaml = load_workflow_config(yaml_path)
+        config_json = load_workflow_config(json_path)
+
+        compiled_yaml = compile_workflow(config_yaml)
+        compiled_json = compile_workflow(config_json)
+
+        # Both YAML and JSON should produce identical compiled keys and values
+        # (excluding sFilename_model_configuration which records the specific config file path)
+        for k in compiled_yaml:
+            if k == "sFilename_model_configuration":
+                continue
+            assert (
+                k in compiled_json
+            ), f"Key {k} missing in JSON compiled output for {mesh}"
+            assert compiled_yaml[k] == compiled_json[k], (
+                f"Value mismatch for key {k} in mesh {mesh}: "
+                f"{compiled_yaml[k]} (YAML) != {compiled_json[k]} (JSON)"
+            )
+
+
+def test_directory_and_stem_resolution(tmp_path):
+    # Test directory containing workflow_config.yaml
+    sub_dir = tmp_path / "mesh_case"
+    sub_dir.mkdir()
+    yaml_file = sub_dir / "workflow_config.yaml"
+    yaml_file.write_text(
+        "workflow:\n  mesh_type: latlon\nresolutions:\n  degree: 1.0\n",
+        encoding="utf-8",
+    )
+
+    # Pass directory directly
+    cfg1 = load_workflow_config(sub_dir)
+    assert cfg1["workflow"]["mesh_type"] == "latlon"
+    assert cfg1["config_file"] == yaml_file.resolve()
+
+    # Pass stem without suffix
+    stem_path = sub_dir / "workflow_config"
+    cfg2 = load_workflow_config(stem_path)
+    assert cfg2["workflow"]["mesh_type"] == "latlon"
+
+    # Non-existent directory raises FileNotFoundError
+    with pytest.raises(FileNotFoundError):
+        load_workflow_config(tmp_path / "empty_dir_that_does_not_exist")
+
+
+def test_dump_workflow_config_roundtrip(tmp_path):
+    cfg_initial = (
+        load_workflow_config(
+            {
+                "workflow": {"mesh_type": "healpix", "case_index": 5},
+                "resolutions": {"meter": 25000.0},
+                "paths": {"output_workspace": str(tmp_path / "out")},
+            }
+            if False
+            else tmp_path / "nonexistent"
+        )
+        if False
+        else None
+    )
+
+    # Load from minimal dict via dump
+    test_dict = {
+        "workflow": {
+            "date": "20261031",
+            "mesh_type": "healpix",
+            "case_index": 2,
+            "model": "healpix",
+            "debug": False,
+            "run_on_hpc": False,
+        },
+        "resolutions": {"meter": 25000.0},
+        "paths": {
+            "output_workspace": str(tmp_path / "out"),
+            "output_mesh": "healpix.geojson",
+        },
+        "features": {"use_tiles": True, "tile_mode": "base"},
+    }
+
+    yaml_target = tmp_path / "dumped.yaml"
+    dump_workflow_config(test_dict, yaml_target, fmt="yaml")
+    assert yaml_target.is_file()
+
+    loaded_yaml = load_workflow_config(yaml_target)
+    assert loaded_yaml["workflow"]["mesh_type"] == "healpix"
+    assert loaded_yaml["resolutions"]["meter"] == 25000.0
+    assert loaded_yaml["features"]["use_tiles"] is True
+
+    json_target = tmp_path / "dumped.json"
+    dump_workflow_config(test_dict, json_target, fmt="json")
+    assert json_target.is_file()
+
+    loaded_json = load_workflow_config(json_target)
+    assert loaded_json["workflow"]["mesh_type"] == "healpix"
+    assert loaded_json["resolutions"]["meter"] == 25000.0
+
+
+def test_load_workflow_config_invalid_structure(tmp_path):
+    invalid_file = tmp_path / "invalid.yaml"
+    invalid_file.write_text("- item1\n- item2\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="must contain a mapping/dictionary object"):
+        load_workflow_config(invalid_file)

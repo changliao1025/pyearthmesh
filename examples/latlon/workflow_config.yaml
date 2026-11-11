@@ -1,0 +1,44 @@
+# ==============================================================================
+# Tier 1 Specification: Regular Lat-Lon Mesh Workflow
+#
+# This YAML file defines the high-level intent for creating a regular Latitude-
+# Longitude grid over the Qinghai Lake region. The two-tier compiler parses this
+# human-friendly specification and converts it into native LatLonCase parameters.
+# ==============================================================================
+
+# Workflow metadata and runtime execution controls
+workflow:
+  date: null                         # Run date string (YYYYMMDD); null defaults to current date
+  mesh_type: latlon                  # Mesh family identifier: latlon, mpas, healpix, isea, rhealpix
+  case_index: 1                      # Case index identifier
+  model: latlon                      # Generator model name
+  debug: false                       # Enable detailed diagnostic messages
+  run_on_hpc: false                  # Whether to dispatch via SLURM job scripts
+
+# Spatial resolution settings
+resolutions:
+  degree: 0.16666666666666666        # Angular resolution (~20 km cell spacing at equator)
+
+# Geographic extent constraints
+region:
+  bbox:                              # Bounding box coordinates in decimal degrees
+    left: 98.0                       # Minimum longitude (degrees East)
+    right: 101.0                     # Maximum longitude (degrees East)
+    bottom: 36.0                     # Minimum latitude (degrees North)
+    top: 37.5                        # Maximum latitude (degrees North)
+  wkt: ""                            # Optional Well-Known Text boundary polygon
+
+# Mesh generation and boundary flags
+flags:
+  global: false                      # Regional mesh constrained to bounding box / boundary
+  mesh_boundary: false               # Crop mesh using vector boundary (false = use bbox)
+  save_mesh: true                    # Export mesh to GeoJSON/disk
+  visualization: false               # Enable map visualization output
+  rotation: false                    # Grid orientation rotation
+
+# File and workspace path configurations
+paths:
+  output_workspace: ../../data/qinghaihu   # Output directory (relative to this YAML file)
+  output_mesh: lake_latlon_20km.geojson     # Generated mesh output filename
+  mesh_boundary: ""                        # Vector boundary file (GeoJSON/SHP)
+  region_geometry: ""                      # Optional vector boundary file (GeoJSON/SHP)

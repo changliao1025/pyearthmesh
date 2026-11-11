@@ -1,4 +1,4 @@
-"""Create an ISEA3H mesh using the unified JSON workflow configuration."""
+"""Create an ISEA3H mesh using the unified workflow configuration (YAML/JSON)."""
 
 from pathlib import Path
 
@@ -6,7 +6,7 @@ from pyearthmesh.config.config_manager import create_workflow
 
 
 def main() -> None:
-    config_file = Path(__file__).with_name("workflow_config.json")
+    config_file = Path(__file__).with_name("workflow_config.yaml")
     workflow = create_workflow(config_file)
     workflow.setup()
     result = workflow.run()

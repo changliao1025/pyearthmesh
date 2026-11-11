@@ -18,7 +18,7 @@ from pyearthmesh.config.config_manager import create_workflow
 
 def main() -> None:
     # ── Step 1 & 2: Build the workflow from configuration ─────────────────────
-    sFilename_workflow = Path(__file__).with_name("workflow_config.json")
+    sFilename_workflow = Path(__file__).with_name("workflow_config.yaml")
     print("Step 1: Loading workflow configuration...")
     print(f"   * {sFilename_workflow}")
 

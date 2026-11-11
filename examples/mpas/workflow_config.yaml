@@ -1,0 +1,110 @@
+# ==============================================================================
+# Tier 1 Specification: Variable-Resolution MPAS Unstructured Mesh Workflow
+#
+# This YAML specification drives variable-resolution spherical Voronoi / Delaunay
+# mesh generation using JIGSAW. The two-tier compiler maps these human-readable
+# resolutions and feature flags directly into native MPASCase parameters and
+# JIGSAW spacing/geometry field generators.
+# ==============================================================================
+
+# High-level workflow orchestration and execution targets
+workflow:
+  date: "20260901"                                # Simulation / run date (YYYYMMDD)
+  mesh_type: mpas                                 # Target mesh family (MPAS / JIGSAW)
+  case_index: 1                                   # Case index number
+  model: jigsaw                                   # Core mesh generation backend
+  debug: true                                     # Enable verbose diagnostic logging
+  largest_outlets: 10                             # Retain top N largest basin outlets
+  run_on_hpc: false                               # Set true to generate SLURM batch job scripts
+
+# Multi-scale target cell resolutions (in kilometers)
+resolutions:
+  ocean_km: 100                                   # Coarse open ocean resolution
+  land_km: 50.0                                   # Base land surface resolution
+  river_network_km: 5                             # Refined river corridor resolution
+  coastline_km: 10                                # Near-shore transition resolution
+  lake_boundary_km: 5                             # Lake perimeter refinement
+  watershed_boundary_km: 5                        # Watershed divide refinement
+
+# Geographic domain extents
+region:
+  bbox:
+    left: 95.9083                                 # Western bounding longitude
+    right: 119.1798                               # Eastern bounding longitude
+    bottom: 32.1583                               # Southern bounding latitude
+    top: 41.8379                                  # Northern bounding latitude
+
+# Mesh generation and boundary flags
+flags:
+  global: false                                   # Regional mesh constrained to basin boundary
+  mesh_boundary: true                             # Crop global mesh using vector basin boundary
+  save_mesh: true                                 # Export mesh to GeoJSON/disk
+  visualization: false                            # Enable map visualization output
+  rotation: false                                 # Grid orientation rotation
+
+# Cross-platform dataset and workspace paths
+paths:
+  input_workspace:
+    Darwin: /Users/changliao/data/hexwatershed
+    Linux: /qfs/people/liao313/workspace/python/unified_land_river_mesh/data/global/input
+    Windows: D:/data/modeldata/hexwatershed
+    default: ./input
+  output_workspace:
+    Darwin: /Users/changliao/scratch/earthmesh/mpas
+    Linux: /data2/share/liaochang/04model/jigsaw/mpas
+    Windows: D:/scratch/04model/jigsaw/mpas
+    default: ./output
+  mesh_boundary:
+    Darwin: /Users/changliao/data/hexwatershed/global/vector/region.geojson
+    Linux: /public/home/liaochang/data/hexwatershed/global/vector/region.geojson
+    default: ./region.geojson
+  river_network_vector:
+    Darwin: /Users/changliao/data/hexwatershed/qinghaihu/vector/flowline_hydroshed_simplified_clipped_clean.geojson
+    Linux: /public/home/liaochang/data/hexwatershed/qinghaihu/vector/flowline_hydroshed_simplified_clipped_clean.geojson
+    default: ./flowline_hydroshed_simplified_clipped_clean.geojson
+  river_network_raster:
+    Darwin: /Users/changliao/data/hexwatershed/qinghaihu/raster/river_networks.tif
+    Linux: /public/home/liaochang/data/hexwatershed/qinghaihu/raster/river_networks.tif
+    default: ./river_networks.tif
+  lake_boundary_vector:
+    Darwin: /Users/changliao/data/hexwatershed/qinghaihu/vector/lake_boundary_hydrobasins_qinghaihu.geojson
+    Linux: /public/home/liaochang/data/hexwatershed/qinghaihu/vector/lake_boundary_hydrobasins_qinghaihu.geojson
+    default: ./lake_boundary_hydrobasins_qinghaihu.geojson
+  lake_boundary_raster:
+    Darwin: /Users/changliao/data/hexwatershed/qinghaihu/raster/lake_boundary_mask.tif
+    Linux: /public/home/liaochang/data/hexwatershed/qinghaihu/raster/lake_boundary_mask.tif
+    default: ./lake_boundary_mask.tif
+  watershed_boundary_vector: ""
+  watershed_boundary_raster:
+    Darwin: /Users/changliao/data/hexwatershed/qinghaihu/raster/basin_boundary_mask.tif
+    Linux: /public/home/liaochang/data/hexwatershed/qinghaihu/raster/basin_boundary_mask.tif
+    default: ./basin_boundary_mask.tif
+  coastline_vector: ""
+  coastline_raster:
+    Darwin: /Users/changliao/scratch/land_ocean_mask_wo_island_buffered_fixed.tif
+    Linux: /data2/share/liaochang/04model/jigsaw/global/coastline/land_ocean_mask_wo_island_buffered_fixed.tif
+    default: ./land_ocean_mask_wo_island_buffered_fixed.tif
+  region_geometry:
+    Darwin: /Users/changliao/data/hexwatershed/global/vector/region.geojson
+    Linux: /public/home/liaochang/data/hexwatershed/global/vector/region.geojson
+    default: ./region.geojson
+  dam_vector: ""
+
+# Backend tuning parameters and spacing field flags for JIGSAW
+jigsaw:
+  standalone: true                                # Run standalone generator without external wrapper
+  create_directory: true                          # Auto-create case subfolder in workspace
+  hours: 3                                        # SLURM walltime allocation (hours)
+  slurm: cpu_single                               # SLURM partition or queue name
+  ncolumn_space: 3600                             # Spacing raster longitudinal grid cells (0.1 deg)
+  nrow_space: 1800                                # Spacing raster latitudinal grid cells (0.1 deg)
+  iFlag_geom: true                                # Build boundary geometry file (.msh)
+  iFlag_spac: true                                # Build spacing field raster (.msh)
+  iFlag_spac_ocean: true                          # Apply ocean spacing constraint
+  iFlag_spac_land: true                           # Apply land spacing constraint
+  iFlag_geom_river_network: true                  # Enforce river network feature constraints
+  iFlag_spac_river_network: true                  # Enforce river network resolution refinement
+  iFlag_geom_lake_boundary: true                  # Enforce lake boundary feature constraints
+  iFlag_spac_lake_boundary: true                  # Enforce lake boundary resolution refinement
+  iFlag_spac_watershed_boundary: true             # Refine watershed divide boundaries
+  iFlag_spac_coastline: true                      # Refine coastline transition zone

@@ -1,0 +1,1 @@
+"""Square structured mesh package."""

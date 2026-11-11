@@ -19,19 +19,9 @@ class LatLonCase(BaseCase):
         return output_filename
 
     def run(self):
-        from pyearthmesh.meshes.structured.latlon.create_latlon_mesh import (
-            create_latlon_mesh,
-        )
+        from pyearthmesh.meshes.generate_mesh import generate_mesh
 
-        return create_latlon_mesh(
-            self.config["dLongitude_left"],
-            self.config["dLatitude_bot"],
-            self.config["dResolution_degree"],
-            self.config["ncolumn"],
-            self.config["nrow"],
-            self.config["sFilename_mesh"],
-            self.config.get("pBoundary_wkt"),
-        )
+        return generate_mesh(self.config, sMesh_type="latlon")
 
 
 class LatLonWorkflow(BaseWorkflow):
@@ -62,8 +52,9 @@ class LatLonWorkflow(BaseWorkflow):
             raise TypeError("spec must be a WorkflowSpec or dict")
 
         config = dict(native_config)
+        cls.resolve_boundary_and_flags(spec, config)
+
         resolution = spec.get("resolution", {}) or {}
-        region = spec.get("region", {}) or {}
         paths = spec.get("paths", {}) or {}
 
         degree = (
@@ -77,26 +68,14 @@ class LatLonWorkflow(BaseWorkflow):
         if degree <= 0:
             raise ValueError("Lat-Lon resolution must be positive")
 
-        bounds = region.get("bbox", {}) or {}
-        longitude_left = float(
-            region.get("longitude_left") or bounds.get("left", -180.0)
-        )
-        longitude_right = float(
-            region.get("longitude_right") or bounds.get("right", 180.0)
-        )
-        latitude_bot = float(region.get("latitude_bot") or bounds.get("bottom", -90.0))
-        latitude_top = float(region.get("latitude_top") or bounds.get("top", 90.0))
-
         config["mesh_type"] = "latlon"
         config["dResolution_degree"] = degree
-        config["dLongitude_left"] = longitude_left
-        config["dLongitude_right"] = longitude_right
-        config["dLatitude_bot"] = latitude_bot
-        config["dLatitude_top"] = latitude_top
-        config["ncolumn"] = int(round((longitude_right - longitude_left) / degree))
-        config["nrow"] = int(round((latitude_top - latitude_bot) / degree))
-        config["pBoundary_wkt"] = region.get("wkt")
-        config["iFlag_global"] = int(not bool(config["pBoundary_wkt"]))
+        config["ncolumn"] = int(
+            round((config["dLongitude_right"] - config["dLongitude_left"]) / degree)
+        )
+        config["nrow"] = int(
+            round((config["dLatitude_top"] - config["dLatitude_bot"]) / degree)
+        )
 
         output_workspace = paths.get("output_workspace") or "./output"
         output_filename = paths.get("output_mesh") or "latlon_mesh.geojson"

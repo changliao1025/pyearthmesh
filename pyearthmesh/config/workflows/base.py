@@ -28,6 +28,7 @@ class WorkflowSpec:
         region: dict[str, Any] | None = None,
         resolution: dict[str, Any] | None = None,
         paths: dict[str, Any] | None = None,
+        flags: dict[str, Any] | None = None,
         execution: dict[str, Any] | None = None,
         features: dict[str, Any] | None = None,
     ):
@@ -37,6 +38,7 @@ class WorkflowSpec:
         self.region = dict(region or {})
         self.resolution = dict(resolution or {})
         self.paths = dict(paths or {})
+        self.flags = dict(flags or {})
         self.execution = dict(execution or {})
         self.features = dict(features or {})
 
@@ -79,6 +81,7 @@ class WorkflowSpec:
             region=data.get("region"),
             resolution=data.get("resolution"),
             paths=data.get("paths"),
+            flags=data.get("flags"),
             execution=data.get("execution"),
             features=data.get("features"),
         )
@@ -91,6 +94,7 @@ class WorkflowSpec:
             "region": self.region,
             "resolution": self.resolution,
             "paths": self.paths,
+            "flags": self.flags,
             "execution": self.execution,
             "features": self.features,
         }
@@ -109,6 +113,7 @@ class BaseWorkflow(ABC):
         self.config = config
         self.workflow = config.get("workflow", {})
         self.resolutions = config.get("resolutions", {})
+        self.flags = config.get("flags", {})
         self.paths = config.get("paths", {})
         self.region = config.get("region", {})
         self.features = config.get("features", {})
@@ -148,6 +153,155 @@ class BaseWorkflow(ABC):
         return native_config
 
     @classmethod
+    def resolve_boundary_and_flags(
+        cls, spec: WorkflowSpec | dict[str, Any], native_config: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Centrally resolve boundary geometry, extents, and mesh flags.
+
+        Calculates dLatitude_mean and dLongitude_mean dynamically from extents.
+        """
+        if hasattr(spec, "to_dict"):
+            spec_data = spec.to_dict()
+        elif isinstance(spec, dict):
+            spec_data = spec
+        else:
+            raise TypeError("spec must be a WorkflowSpec or dict")
+
+        flags = spec_data.get("flags", {}) or {}
+        region = spec_data.get("region", {}) or {}
+        paths = spec_data.get("paths", {}) or {}
+        features = spec_data.get("features", {}) or {}
+        bounds = region.get("bbox", {}) or {}
+
+        lon_left = region.get("longitude_left")
+        if lon_left is None:
+            lon_left = bounds.get("left")
+
+        lon_right = region.get("longitude_right")
+        if lon_right is None:
+            lon_right = bounds.get("right")
+
+        lat_bot = region.get("latitude_bot")
+        if lat_bot is None:
+            lat_bot = bounds.get("bottom")
+
+        lat_top = region.get("latitude_top")
+        if lat_top is None:
+            lat_top = bounds.get("top")
+
+        boundary_file = (
+            paths.get("mesh_boundary")
+            or paths.get("mesh_boundary_file")
+            or paths.get("boundary_file")
+            or paths.get("boundary_vector")
+            or region.get("boundary_file")
+            or paths.get("region_geometry")
+            or region.get("geometry")
+        )
+        wkt = region.get("wkt")
+
+        i_flag_mesh_boundary = int(bool(flags.get("mesh_boundary", False)))
+        i_flag_global = int(bool(flags.get("global", False)))
+
+        from pyearthmesh.meshes.generate_mesh import determine_mesh_boundary
+
+        resolved_wkt, extent = determine_mesh_boundary(
+            pBoundary_wkt=wkt,
+            sFilename_mesh_boundary=boundary_file,
+            iFlag_mesh_boundary=i_flag_mesh_boundary,
+            dLongitude_left=float(lon_left) if lon_left is not None else -180.0,
+            dLongitude_right=float(lon_right) if lon_right is not None else 180.0,
+            dLatitude_bot=float(lat_bot) if lat_bot is not None else -90.0,
+            dLatitude_top=float(lat_top) if lat_top is not None else 90.0,
+            iFlag_global=i_flag_global,
+        )
+
+        if extent:
+            lon_left, lon_right, lat_bot, lat_top = extent
+
+        lat_mean = (
+            0.5 * (float(lat_bot) + float(lat_top))
+            if lat_bot is not None and lat_top is not None
+            else 0.0
+        )
+        lon_mean = (
+            0.5 * (float(lon_left) + float(lon_right))
+            if lon_left is not None and lon_right is not None
+            else 0.0
+        )
+
+        native_config["pBoundary_wkt"] = resolved_wkt
+        native_config["sFilename_mesh_boundary"] = boundary_file or None
+        native_config["sFilename_boundary"] = boundary_file or None
+        native_config["iFlag_mesh_boundary"] = i_flag_mesh_boundary
+
+        if "global" in flags:
+            native_config["iFlag_global"] = 1 if flags["global"] else 0
+        else:
+            native_config["iFlag_global"] = (
+                0
+                if (
+                    resolved_wkt
+                    or extent
+                    or (
+                        lon_left is not None
+                        and lon_right is not None
+                        and lat_bot is not None
+                        and lat_top is not None
+                        and (
+                            float(lon_left) != -180.0
+                            or float(lon_right) != 180.0
+                            or float(lat_bot) != -90.0
+                            or float(lat_top) != 90.0
+                        )
+                    )
+                )
+                else 1
+            )
+
+        if lon_left is not None:
+            native_config["dLongitude_left"] = float(lon_left)
+        if lon_right is not None:
+            native_config["dLongitude_right"] = float(lon_right)
+        if lat_bot is not None:
+            native_config["dLatitude_bot"] = float(lat_bot)
+        if lat_top is not None:
+            native_config["dLatitude_top"] = float(lat_top)
+        native_config["dLatitude_mean"] = float(lat_mean)
+        native_config["dLongitude_mean"] = float(lon_mean)
+
+        if "save_mesh" in flags:
+            native_config["iFlag_save_mesh"] = 1 if flags["save_mesh"] else 0
+        else:
+            native_config["iFlag_save_mesh"] = 1
+
+        if "rotation" in flags:
+            native_config["iFlag_rotation"] = 1 if flags["rotation"] else 0
+
+        if "use_mesh_dem" in flags:
+            native_config["iFlag_use_mesh_dem"] = 1 if flags["use_mesh_dem"] else 0
+
+        if "use_tiles" in flags or "use_tiles" in features:
+            native_config["iFlag_use_tiles"] = (
+                1 if (flags.get("use_tiles") or features.get("use_tiles")) else 0
+            )
+
+        if "netcdf" in flags:
+            native_config["iFlag_netcdf"] = 1 if flags["netcdf"] else 0
+
+        if "check_mesh_quality" in flags or "check_mesh_quality" in features:
+            native_config["check_mesh_quality"] = bool(
+                flags.get("check_mesh_quality", features.get("check_mesh_quality"))
+            )
+
+        if "convert_to_parquet" in flags or "convert_to_parquet" in features:
+            native_config["convert_to_parquet"] = bool(
+                flags.get("convert_to_parquet", features.get("convert_to_parquet"))
+            )
+
+        return native_config
+
+    @classmethod
     def translate_frontend_to_backend(
         cls, spec: WorkflowSpec, native_config: dict[str, Any]
     ) -> dict[str, Any]:
@@ -176,13 +330,14 @@ class BaseWorkflow(ABC):
                 **self.resolutions,
             },
             "paths": self.paths,
+            "flags": self.flags,
             "execution": {
                 "debug": self.workflow.get("debug", False),
                 "model": self.workflow.get("model", "jigsaw"),
                 "run_on_hpc": self.workflow.get("run_on_hpc", False),
             },
             "features": {
-                **self.features,
+                **(self.features or {}),
                 "coastline": self.workflow.get("process_coastline", False),
                 "simplify_hydrosheds_river_network": self.workflow.get(
                     "simplify_hydrosheds_river_network", False

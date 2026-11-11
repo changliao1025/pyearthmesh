@@ -9,6 +9,11 @@ import numpy as np
 from osgeo import gdal
 
 try:
+    import mpas_tools.mesh.creation.mesh_definition_tools as mdt
+except ImportError:
+    mdt = None
+
+try:
     import jigsawpy
 except ImportError:
     jigsawpy = None
@@ -36,17 +41,35 @@ def compute_mask(
 ):
     dummy_index = np.where(aData == value)
     irows, icols = dummy_index
-    dLon = dLongitude_upper_left + icols * pixelWidth
-    dLat = dLatitude_upper_left + irows * pixelHeight
-    iX = ((dLon + 180.0) / (360.0 / ncolumn_space)).astype(int)
-    iY = ((dLat + 90) / (180.0 / nrow_space)).astype(int)
-    # Ensure indices are within range
-    iX = np.clip(iX, 0, ncolumn_space - 1)
-    iY = np.clip(iY, 0, nrow_space - 1)
-    # Create a mask with the same shape as the grid
-    mask = np.full((nrow_space, ncolumn_space), False, dtype=bool)
-    # Use 2D indexing to set the mask
-    mask[iY, iX] = True
+
+    # If input data dimensions match output grid, use direct indexing
+    if aData.shape[0] == nrow_space and aData.shape[1] == ncolumn_space:
+        mask = np.full((nrow_space, ncolumn_space), False, dtype=bool)
+        mask[irows, icols] = True
+    else:
+        # Otherwise, do coordinate transformation
+        # Precompute cell sizes to reduce precision loss
+        dlon_cell = 360.0 / ncolumn_space
+        dlat_cell = 180.0 / nrow_space
+
+        # Compute coordinates with reduced accumulation error
+        dLon = dLongitude_upper_left + icols * pixelWidth
+        dLat = dLatitude_upper_left + irows * pixelHeight
+
+        # Convert to grid indices using rounding for better precision
+        # North is at iY=0, so latitude inverted
+        iX = np.round((dLon + 180.0) / dlon_cell).astype(int)
+        iY = np.round((90.0 - dLat) / dlat_cell).astype(int)
+
+        # Ensure indices are within range
+        iX = np.clip(iX, 0, ncolumn_space - 1)
+        iY = np.clip(iY, 0, nrow_space - 1)
+
+        # Create a mask with the same shape as the grid
+        mask = np.full((nrow_space, ncolumn_space), False, dtype=bool)
+        # Use 2D indexing to set the mask
+        mask[iY, iX] = True
+
     return mask
 
 
@@ -890,6 +913,11 @@ def run_jigsaw(
     opts.hfun_tags = "precision = 9"  # less float prec.
 
     jigsawpy.savemsh(opts.geom_file, geom, opts.geom_tags)
+
+    # Flip spac.value and spac.slope upside down to match increasing ygrid order
+    # (ygrid goes south to north, but array rows naturally go north to south in GDAL convention)
+    spac.value = np.flipud(spac.value)
+    spac.slope = np.flipud(spac.slope)
 
     jigsawpy.savemsh(opts.hfun_file, spac, opts.hfun_tags)
 

@@ -27,6 +27,7 @@ def create_mpas_mesh(
     iFlag_arctic_in=None,
     iFlag_fill_hole_in=None,
     pBoundary_in=None,
+    sFilename_mesh_boundary_in=None,
     sWorkspace_jigsaw_in=None,
     sFilename_mpas_mesh_netcdf_in=None,
     sFilename_jigsaw_mesh_netcdf_in=None,
@@ -40,18 +41,33 @@ def create_mpas_mesh(
     iFlag_generate_mesh_in=None,
 ):
     """
-    Create a MPAS mesh
+    Create a MPAS mesh from a JIGSAW-generated NetCDF file.
 
     Args:
-        iFlag_global_in (int): _description_
-        iFlag_use_mesh_dem (int): _description_
-        iFlag_save_mesh_in (int): _description_
-        pBoundary_in (_type_): _description_
-        sFilename_mpas_mesh_netcdf_in (_type_): _description_
-        sFilename_output_in (_type_): _description_
+        sFilename_output_in (str): Output GeoJSON filename for the mesh cells.
+        iFlag_global_in (int): 1 for global mesh, 0 for regional. Default 0.
+        iFlag_use_mesh_dem_in (int): 1 to include DEM elevation fields. Default 0.
+        iFlag_save_mesh_in (int): 1 to save GeoJSON output. Default 1.
+        iFlag_run_jigsaw_in (int): 1 to run JIGSAW before reading mesh. Default 0.
+        iFlag_antarctic_in (int): 1 to process Antarctic region only. Default 0.
+        iFlag_arctic_in (int): 1 to process Arctic region only. Default 0.
+        iFlag_fill_hole_in (int): Reserved for future use.
+        pBoundary_in (str): WKT string of the domain boundary polygon.
+        sFilename_mesh_boundary_in (str): Path to mesh boundary vector file (used if pBoundary_in is None).
+        sWorkspace_jigsaw_in (str): Path to JIGSAW workspace directory.
+        sFilename_mpas_mesh_netcdf_in (str): Path to existing MPAS NetCDF mesh file.
+        sFilename_jigsaw_mesh_netcdf_in (str): Path to JIGSAW output NetCDF file.
+        sFilename_land_ocean_mask_in (str): Path to land/ocean mask file.
+        aConfig_jigsaw_in (dict): JIGSAW configuration dictionary.
+        aFilename_river_network_in (list): List of river network filenames.
+        aFilename_watershed_boundary_in (list): List of watershed boundary filenames.
+        aFilename_lake_boundary_in (list): List of lake boundary filenames.
+        aFilename_coastline_in (list): List of coastline filenames.
+        iFlag_read_mesh_in (int): Reserved for future use.
+        iFlag_generate_mesh_in (int): Reserved for future use.
 
     Returns:
-        _type_: _description_
+        list: List of pympas cell objects in the domain.
     """
     import netCDF4 as nc
 
@@ -85,13 +101,22 @@ def create_mpas_mesh(
     else:
         pass
 
-    if pBoundary_in is None:
-        pBoundary = None
-    else:
+    if pBoundary_in is not None:
         # for the reason that a geometry object will be crash if the associated dataset is closed, we must pass wkt string
         # https://gdal.org/api/python_gotchas.html
         pBoundary = ogr.CreateGeometryFromWkt(pBoundary_in)
-        # pBoundary = pBoundary_in #only works for shapely geometry object
+    elif sFilename_mesh_boundary_in is not None and os.path.exists(
+        sFilename_mesh_boundary_in
+    ):
+        from pyearthmesh.config.workflows.mpas_workflow import MPASWorkflow
+
+        wkt = MPASWorkflow._boundary_wkt_from_geojson(sFilename_mesh_boundary_in)
+        if wkt:
+            pBoundary = ogr.CreateGeometryFromWkt(wkt)
+        else:
+            pBoundary = None
+    else:
+        pBoundary = None
 
     if os.path.exists(sFilename_output_in):
         os.remove(sFilename_output_in)
@@ -172,15 +197,16 @@ def create_mpas_mesh(
         pass
     else:
         # check whether the jigsaw mesh file exists
-        if sFilename_jigsaw_mesh_netcdf_in is not None:
+        if sFilename_jigsaw_mesh_netcdf_in:
             if os.path.exists(sFilename_jigsaw_mesh_netcdf_in):
                 # can we use the jigsaw mesh to create the mpas mesh?
                 pass
             else:
-                print("JIGSAW Mesh file does not exist!")
+                print("JIGSAW mesh file does not exist!")
         pass
 
     if os.path.exists(sFilename_mpas_mesh_netcdf_in):
+        print("Reuse MPAS mesh file for mesh generation directly!")
         pass
     else:
         print("Mesh file does not exist!")
@@ -757,6 +783,16 @@ def create_mpas_mesh(
         pFeature = None
         pLayer = None
         pDataset = None
+
+        try:
+            sFilename_parquet = os.path.splitext(sFilename_output_in)[0] + ".parquet"
+            from pyearth.toolbox.conversion.convert_vector_format import (
+                convert_vector_format,
+            )
+
+            convert_vector_format(sFilename_output_in, sFilename_parquet)
+        except Exception:
+            pass
 
     # for maps we need to clean some cell because they were not actually in the domain
     # besides, we need to add some small holes back

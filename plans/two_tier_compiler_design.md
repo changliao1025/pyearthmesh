@@ -1,537 +1,347 @@
 # Two-Tier Compiler Pattern for Multi-Mesh Workflow Architecture
 
-> **Status: ACTIVE SPECIFICATION (CORE ARCHITECTURE IMPLEMENTED)**
+> **Status: ACTIVE SPECIFICATION (CORE ARCHITECTURE IMPLEMENTED & YAML-EXTENDED)**
 > - **Core Compiler Boundary:** Implemented via [`compile_workflow()`](../pyearthmesh/config/config_manager.py) and [`WorkflowSpec`](../pyearthmesh/config/workflows/base.py).
+> - **Specification Formats:** **YAML (primary, comment-enabled)** and **JSON (backward-compatible, programmatic)** via [`load_workflow_config()`](../pyearthmesh/config/config_manager.py) and [`dump_workflow_config()`](../pyearthmesh/config/config_manager.py).
 > - **Implemented Workflow Adapters:** `MPASWorkflow`, `LatLonWorkflow`, `HealpixWorkflow`, `ISEAWorkflow`, `RHEALPixWorkflow`.
-> - **Test Suite:** Passing in [`tests/test_compile_workflow.py`](../tests/test_compile_workflow.py) and [`tests/test_workflow_spec.py`](../tests/test_workflow_spec.py).
+> - **Test Suite:** Passing in [`tests/test_compile_workflow.py`](../tests/test_compile_workflow.py) (including YAML loading with comments, extension resolution, roundtrip dumping, and YAML/JSON compile parity across all 5 mesh families) and [`tests/test_workflow_spec.py`](../tests/test_workflow_spec.py).
 > - **Future Extensions:** Workflow classes for square, hexagon, tin, dggrid meshes can be added using the same compiler boundary.
+
+---
 
 ## Purpose
 
-This document proposes a two-tier compiler architecture for `pyearthmesh` that is designed for the real scope of the package: multiple mesh families, not only MPAS.
+This document specifies the two-tier compiler architecture for `pyearthmesh` designed to support multiple mesh families across structured, spherical, and unstructured spatial representations.
 
-The package currently supports multiple mesh types, including:
+The package currently supports multiple mesh families:
 
-- structured or regular-grid families such as lat-lon, square, hexagon, triangular
-- spherical/pixel-based families such as HEALPix, rHEALPix, Cubic Sphere
-- unstructured families such as JIGSAW, MPAS, TIN, DGGRID, ISEA
+- **Structured / Regular-Grid:** latlon, square, hexagon, triangular
+- **Spherical / Pixel / DGGS:** HEALPix, rHEALPix, Cubic Sphere, ISEA3H / DGGRID
+- **Unstructured / Geometry-Driven:** JIGSAW, MPAS, TIN
 
-A robust design must therefore be mesh-family aware rather than assuming a single backend-specific workflow.
+A robust design must be mesh-family aware rather than assuming a single backend-specific workflow.
 
-The design follows the principle:
+The architecture enforces a strict separation:
 
-- Tier 1: high-level domain specification
-- Tier 2: compiled backend execution model
-
-This keeps the user-facing workflow readable while preserving compatibility with many engine-specific mesh generators and runtime execution patterns.
+- **Tier 1: High-Level Domain Specification (YAML / JSON):** User intent, spatial resolutions, boundary constraints, and execution controls.
+- **Tier 2: Compiled Backend Execution Model:** Engine-specific native configuration, geometry generators, and runtime case orchestration (`setup()`, `run()`, `create_hpc_job()`).
 
 ---
 
-## 1. Design goal
+## 1. Design Goal & Philosophy
 
-The package should support multiple mesh families using a shared workflow model and a common compiler boundary.
+Scientific workflow definitions must satisfy two competing demands:
+1. **User Friendliness & Maintainability:** Domain scientists need readable configuration files that explain parameter choices (e.g. *why* a river buffer is 5 km vs. 100 km ocean, what coordinate projection is expected, or which SLURM queue is targeted) directly inline via `# comments`.
+2. **Execution Rigor:** Diverse mesh generation engines (JIGSAW, MPAS-Tools, DGGRID, HEALPix libraries) require specific, non-uniform parameters, rasters, and boundary geometries.
 
-The key requirement is not merely “many mesh types,” but a clean separation of concerns:
-
-1. The user specifies the domain and mesh intent.
-2. The framework selects the mesh family and compiles that intent into a canonical internal mesh specification.
-3. The backend executes that compiled model.
-
-This is the scientific-modeling equivalent of a frontend + compiler + backend pipeline.
-
----
-
-## 2. Mesh families in this project
-
-The architecture should be designed around the fact that the package already groups mesh types into distinct families.
-
-### 2.1 Structured / regular-grid meshes
-
-Examples:
-- latlon
-- square
-- hexagon
-- triangular
-
-These typically encode:
-- grid origin
-- resolution in degrees or metres
-- domain bounds
-- regular cell layout
-- optional region boundary
-
-### 2.2 Spherical / pixel meshes
-
-Examples:
-- healpix
-- rhealpix
-- cubicsphere
-
-These typically encode:
-- cell resolution in metres
-- tiling mode or pre-defined spherical partitioning
-- global or regional boundary conditions
-- output format and tiling policy
-
-### 2.3 Unstructured / geometry-driven meshes
-
-Examples:
-- jigsaw
-- mpas
-- tin
-- dggrid
-- isea
-
-These typically encode:
-- boundary geometry in WKT or vector data
-- feature flags for coastline, rivers, dams, etc.
-- grid generation rules and region constraints
-- backend-specific optional preprocessing
-
-This variety is the reason the architecture cannot be MPAS-only or even JIGSAW-only. The compiler layer must be generic enough to support all of these patterns.
-
----
-
-## 3. The core idea: a generic two-tier workflow
-
-We define a two-tier system:
-
-### Tier 1: Frontend / domain specification
-
-This layer expresses the scientific and workflow intent in a human-readable form.
-
-Examples:
-- mesh type: `mpas`, `latlon`, `healpix`, `isea`
-- region geometry: GeoJSON boundary
-- resolution policy: degrees, metres, or km
-- feature processing: coastline, rivers, dams
-- output workspace and case metadata
-- HPC policy
-- date and case index
-
-This layer should be declarative and mesh-agnostic. It should answer:
-
-> “What does the user want the mesh to represent?”
-
-### Tier 2: Backend / compiled execution model
-
-This layer translates the specification into the exact internal model that the chosen backend understands.
-
-Examples:
-- flat config keys for a specific generator
-- boundary WKT for MPAS or other geometry-driven mesh families
-- regular-grid parameters for Lat-Lon
-- tiling and spherical partition settings for HEALPix
-- runtime job metadata and output file naming
-
-This layer should answer:
-
-> “How does the chosen backend actually run this?”
-
-A runtime object such as `meshcase` or the per-mesh case object should be a thin execution wrapper around the compiled model, not the source of truth for the domain specification.
-
----
-
-## 4. Why the current design feels redundant
-
-The current code path mixes three layers together:
-
-1. high-level workflow dict
-2. compiled flat config dict
-3. runtime case object state
-
-This is especially visible in the MPAS path, but it is not limited to MPAS. The same pattern would happen for other mesh types if we keep building them through raw generator-specific config dicts.
-
-Typical duplicates include:
-
-- `workflow.mesh_type` and `aConfig["mesh_type"]`
-- `paths.output_workspace` and `sWorkspace_output`
-- `workflow.case_index` and `iCase_index`
-- `workflow.date` and `sDate`
-- `workflow.model` and `sModel`
-
-The duplication is not random; it reflects a transition between:
-
-- legacy flat config style
-- sectioned workflow style
-- runtime execution objects
-
-The clean architecture should make these layers explicit and prevent the same fact from being redeclared multiple times.
-
----
-
-## 5. Proposed architecture for the multi-mesh repository
-
-### 5.1 Layered structure
+The Two-Tier Compiler Pattern bridges this divide cleanly:
 
 ```text
-User workflow JSON
-        |
-        v
-Frontend mesh specification
-        |
-        v
-Mesh-family compiler registry
-        |
-        +--> regular-grid compiler
-        +--> spherical-grid compiler
-        +--> unstructured-mesh compiler
-        |
-        v
-Canonical MeshSpec / CaseSpec
-        |
-        v
-Backend adapter / runtime case
-        |
-        +--> LatLon case
-        +--> HEALPix case
-        +--> MPAS case
-        +--> JIGSAW case
-        +--> etc.
+User Intent (YAML with Comments)
+        │
+        ▼  [Tier 1: load_workflow_config / WorkflowSpec]
+Domain Specification
+        │
+        ▼  [Compiler: compile_workflow()]
+Backend-Native Configuration
+        │
+        ▼  [Tier 2: BaseWorkflow / BaseCase]
+Execution & Mesh Generation (setup / run / HPC scripts)
 ```
-
-### 5.2 Responsibilities by layer
-
-#### Frontend
-
-Responsible for:
-- accepting a JSON or Python dict specification
-- validating section keys and values
-- resolving platform-specific paths
-- defaulting optional values
-- preserving scientific meaning across mesh families
-
-This layer should remain user-facing and easy to edit by hand.
-
-#### Mesh-family compiler
-
-Responsible for:
-- selecting the correct mesh family or backend
-- validating compatibility between the high-level spec and the actual mesh family
-- converting user intent into a canonical internal mesh spec
-- generating mesh-family-specific parameters and flags
-
-This is the true compiler stage.
-
-#### Backend runtime
-
-Responsible for:
-- creating output directories and file names
-- invoking mesh-generation APIs or executables
-- creating HPC job scripts when needed
-- capturing execution metadata
-- interacting with backend-specific APIs
-
-This layer should be mostly procedural and operational.
 
 ---
 
-## 6. Canonical internal model
+## 2. Why YAML is the Primary Tier 1 Specification Format
 
-We should introduce a canonical internal representation that is mesh-family neutral but rich enough to support all generator types.
+While standard JSON is effective for machine-to-machine exchange, it possesses major shortcomings for scientific configuration:
+- **No Comments Allowed:** Standard JSON strictly prohibits comments (`//` or `#`). Users cannot annotate parameters, record data sources, explain resolution tradeoffs, or temporarily toggle settings.
+- **Syntax Rigidity:** Quoted keys, trailing commas, and strict bracket balancing make editing large configurations error-prone.
 
-A good shape is:
-
-```python
-class MeshSpec:
-    mesh_type: str
-    family: str            # "regular", "spherical", "unstructured"
-    case_index: int
-    date: str | None
-    output_workspace: str
-    region_geometry: str | None
-    boundary_wkt: str | None
-    resolutions: dict[str, float]
-    feature_flags: dict[str, bool]
-    execution: dict[str, Any]
-    paths: dict[str, str]
-    backend_params: dict[str, Any]
-```
-
-This object is the compiler output and should be the single authoritative compiled representation.
-
-Important: `backend_params` is intentionally generic. For example:
-
-- a regular-grid mesh may use `dResolution_degree`
-- a spherical mesh may use `nside` or tiling metadata
-- an unstructured mesh may use `pBoundary_wkt`, river flags, or coastline processing flags
-
-The compiler is responsible for normalizing those values into a shared spec while preserving generator-specific data in `backend_params`.
+By adopting **YAML** as the primary human-facing format:
+- **Inline and Block Comments (`# ...`):** Users can thoroughly document grids, parameter origins, and modeling decisions directly in the file.
+- **Cleaner Syntax:** Whitespace-based indentation eliminates bracket clutter and improves readability.
+- **Native Types & Multi-Line Strings:** Seamless representation of numbers, booleans, lists, mappings, and WKT boundary strings.
+- **Full Backward Compatibility:** JSON is a formal syntactic subset of YAML; `pyearthmesh` seamlessly accepts both `.yaml`/`.yml` and `.json` files.
 
 ---
 
-## 7. Mesh-family compiler strategy
+## 3. Mesh Families and Parameter Models
 
-The project should not force every mesh type through a single one-size-fits-all workflow class. Instead, the workflow should be organized by family and/or backend.
+Mesh families have fundamentally different parameter requirements:
 
-### 7.1 Generic workflow registry
+### 3.1 Structured / Regular-Grid Meshes (`latlon`, `square`, `hexagon`, `triangular`)
+- Grid origin / domain bounding box (`dLongitude_left`, `dLatitude_top`, etc.)
+- Resolution in degrees (`dResolution_degree`) or meters (`dResolution_meter`)
+- Number of rows and columns (`nrow`, `ncolumn`)
+- Optional polygon clipping mask
 
-```python
-_WORKFLOWS = {
-    "mpas": MPASWorkflow,
-    "jigsaw": JigsawWorkflow,
-    "latlon": LatLonWorkflow,
-    "healpix": HealpixWorkflow,
-    "rhealpix": RHEALPixWorkflow,
-    "isea": ISEAWorkflow,
-    "square": SquareWorkflow,
-    "hexagon": HexagonWorkflow,
-    "triangular": TriangularWorkflow,
-    "dggrid": DGGRIDWorkflow,
-    "tin": TINWorkflow,
-}
-```
+### 3.2 Spherical Pixel / DGGS Meshes (`healpix`, `rhealpix`, `isea`)
+- Target cell width in meters (`dResolution_meter`)
+- Partitioning / tiling mode (`tile_mode`: `'base'` vs `'simple'`, `use_tiles`: boolean)
+- DGGS aperture specification (e.g., `ISEA3H`)
+- Parquet tabular export and topological mesh quality checks
 
-This keeps the API generic while allowing each mesh type or mesh family to own its own validation and translation logic.
-
-### 7.2 Family-specific base classes
-
-A more structured design is to allow a small family hierarchy:
-
-```python
-class BaseWorkflow(ABC):
-    mesh_type: str
-    family: str
-
-class RegularGridWorkflow(BaseWorkflow):
-    family = "regular"
-
-class SphericalGridWorkflow(BaseWorkflow):
-    family = "spherical"
-
-class UnstructuredMeshWorkflow(BaseWorkflow):
-    family = "unstructured"
-```
-
-Then mesh-specific classes inherit from the appropriate family base class.
-
-This is a better fit for the actual diversity in the repository than a single flat workflow abstraction.
+### 3.3 Unstructured Geometry-Driven Meshes (`mpas`, `jigsaw`, `tin`)
+- Multi-scale spatial resolutions in kilometers (`ocean_km`, `land_km`, `river_network_km`, `coastline_km`, `lake_boundary_km`, `watershed_boundary_km`)
+- Vector and raster guidance masks for rivers, lakes, coastlines, and basin divides
+- JIGSAW generator tuning flags (`iFlag_geom`, `iFlag_spac`, `ncolumn_space`, `nrow_space`, etc.)
+- HPC / SLURM execution parameters (partition, walltime hours)
 
 ---
 
-## 8. Recommended class responsibilities
-
-### 8.1 Frontend config loader
-
-File examples:
-- `pyearthmesh/config/config_manager.py`
-
-Responsibilities:
-- load JSON
-- merge defaults
-- reject unknown keys
-- resolve relative and platform-specific paths
-- set default date if missing
-
-This should remain generic and mesh-type neutral.
-
-### 8.2 BaseWorkflow
-
-File examples:
-- `pyearthmesh/config/workflows/base.py`
-
-Responsibilities:
-- define the workflow interface
-- shared helpers such as distance conversion
-- common orchestration
-- delegation to backend runtime objects
-
-### 8.3 Mesh-family workflow classes
-
-Examples:
-- `MPASWorkflow` for unstructured geometry-driven meshes
-- `LatLonWorkflow` for regular grids
-- `HealpixWorkflow` for spherical pixel meshes
-- `JigsawWorkflow` for JIGSAW-based mesh generation
-
-Responsibilities:
-- validate mesh-specific requirements
-- compile the frontend config into `MeshSpec`
-- attach generator-specific parameters in `backend_params`
-- build the backend runtime case object
-
-### 8.4 Runtime case classes
-
-Examples:
-- `meshcase`
-- mesh-specific case classes for MPAS, JIGSAW, or other generators
-
-Responsibilities:
-- file layout
-- case naming
-- execution lifecycle
-- output directories
-- HPC job generation
-
-These should consume the compiled spec instead of owning scientific intent.
-
----
-
-## 9. Data flow in the multi-mesh design
-
-### Ideal flow
+## 4. Layered Architecture
 
 ```text
-JSON workflow
-  -> load_workflow_config
-  -> WorkflowFactory.select(mesh_type)
-  -> mesh-family compiler
-  -> MeshSpec
-  -> backend adapter
-  -> runtime case object
-  -> setup/run/HPC job generation
+User Workflow File (workflow_config.yaml / workflow_config.json)
+        │
+        ▼
+Frontend Config Loader: load_workflow_config()
+  ├── Resolves relative paths against file location
+  ├── Resolves OS-specific paths (e.g. Linux vs. default)
+  ├── Strips / parses comments seamlessly
+  ├── Merges with DEFAULT_CONFIG schema defaults
+  └── Sets normal run date (YYYYMMDD)
+        │
+        ▼
+Tier 1 Spec: WorkflowSpec
+  ├── mesh_type: str
+  ├── case_index: int
+  ├── region: dict (bbox, wkt, vector)
+  ├── resolution: dict (degree, meter, ocean_km, land_km, etc.)
+  ├── paths: dict
+  ├── execution: dict (debug, model, run_on_hpc)
+  └── features: dict (jigsaw flags, tiling, parquet, etc.)
+        │
+        ▼
+Compiler Boundary: compile_workflow(spec_or_config)
+  ├── Looks up registered workflow class in _WORKFLOWS
+  └── Calls WorkflowClass.compile_from_spec(spec)
+        │
+        ▼
+Tier 2 Compiled Representation (Backend-Native Config)
+  ├── latlon: dResolution_degree, nrow, ncolumn, bbox
+  ├── healpix / rhealpix / isea: dResolution_meter, sISEA_type, tile_mode
+  └── mpas: dResolution_ocean, dResolution_land, sWorkspace_output, jigsaw flags
+        │
+        ▼
+Runtime Case Adapter: BaseCase (MPASCase, LatLonCase, HealpixCase, etc.)
+  ├── case.output_workspace -> resolved output directory
+  ├── case.mesh_file        -> target GeoJSON/NetCDF mesh path
+  ├── case.setup()          -> prepares directory structure and inputs
+  ├── case.run()            -> executes generator, returns MeshCell list / result
+  └── case.create_hpc_job() -> emits run script and SLURM submit.job
 ```
 
-### Required property
-
-The `MeshSpec` should be the only internally compiled representation. Everything else should read from it or derive from it.
-
 ---
 
-## 10. Compatibility strategy
+## 5. Commented Workflow YAML Examples
 
-We do not need to remove all legacy behavior in one step. The migration can be incremental.
+Below are reference commented Tier 1 YAML configurations for each implemented mesh family.
 
-### Phase 1: introduce the compiler boundary
+### 5.1 Regular Lat-Lon Grid (`examples/latlon/workflow_config.yaml`)
 
-- keep the current JSON workflow input format
-- add a canonical `MeshSpec`
-- update workflow classes to build the compiled model
-- keep current runtime case objects functional
+```yaml
+# ==============================================================================
+# Tier 1 Specification: Regular Lat-Lon Mesh Workflow
+# ==============================================================================
+workflow:
+  date: null                         # Run date (YYYYMMDD); null defaults to today
+  mesh_type: latlon                  # Mesh family
+  case_index: 1                      # Case index
+  model: latlon                      # Generator model
+  debug: false                       # Diagnostic logging
+  run_on_hpc: false                  # Local execution
 
-### Phase 2: make `MeshSpec` canonical
+resolutions:
+  degree: 0.16666666666666666        # Angular resolution (~20 km cell spacing)
 
-- update backend execution to read from `MeshSpec`
-- remove direct dependence on raw workflow dicts inside runtime code
+paths:
+  output_workspace: ../../data/qinghaihu   # Relative to config file
+  output_mesh: lake_latlon_20km.geojson     # Output filename
+  region_geometry: ""                      # Vector boundary mask
 
-### Phase 3: deprecate legacy flat config paths
-
-- remove the old “intermediate generated config” pattern from the primary execution path
-- keep compatibility shims only where necessary
-
----
-
-## 11. Design principles
-
-1. One source of truth for domain intent
-2. One canonical compiled representation for all mesh types
-3. Mesh-family-specific validation stays local to the relevant workflow class
-4. Runtime objects should not re-define scientific intent
-5. Backend-specific details stay in backend adapters
-6. Adding a new mesh type should require a workflow implementation and registry entry, not a rewrite of the whole system
-
----
-
-## 12. Acceptance criteria
-
-The design is successful when:
-
-- every supported mesh type has a mesh-specific or mesh-family-specific workflow class,
-- JSON config remains the frontend specification,
-- there is one canonical compiled representation,
-- runtime execution objects do not duplicate user-level mesh semantics,
-- new mesh types can be added via registry and compiler extension,
-- no intermediate generated config is required for the primary execution path.
-
----
-
-## 13. Recommended direction for this project
-
-The correct architecture for `pyearthmesh` is not MPAS-centric. It is a multi-mesh compiler pipeline.
-
-The right target is:
-
-- frontend config manager
-- mesh-family-aware workflow compiler
-- canonical compiled mesh specification
-- backend-specific runtime execution layer
-
-That is the robust scientific-modeling pattern for a project that supports many mesh types.
-
-## 8. Compatibility strategy
-
-We do not need to remove all legacy behavior in one step. The migration can happen in phases.
-
-### Phase 1: introduce the compiler boundary
-
-- keep the existing JSON config format
-- add a `MeshSpec` object
-- update workflow classes to build the compiled model
-- leave runtime case objects intact
-
-### Phase 2: make `MeshSpec` canonical
-
-- update backend execution to read from `MeshSpec`
-- remove direct dependence on raw workflow dicts in runtime code
-
-### Phase 3: deprecate legacy flat config paths
-
-- remove the old “intermediate generated config” pattern from the workflow lifecycle
-- keep compatibility shims only if needed for old scripts
-
----
-
-## 9. Design principles
-
-1. One source of truth for scientific intent
-2. One compiled internal representation
-3. Backend-specific details should stay in backend adapters
-4. Runtime objects should not duplicate user-level config semantics
-5. Mesh-specific logic should be isolated per mesh type
-6. Support for more mesh types should be registry-driven, not hardcoded in workflow logic
-
----
-
-## 10. Proposed implementation plan
-
-### Step 1: define the compiler contract
-
-Add a `MeshSpec` dataclass or simple class with the canonical fields.
-
-### Step 2: refactor `BaseWorkflow`
-
-Move workflow interpretation into a clear compile step:
-
-```python
-class BaseWorkflow:
-    def compile(self) -> MeshSpec:
-        ...
+region:
+  bbox:
+    left: 98.0                       # Min longitude
+    right: 101.0                     # Max longitude
+    bottom: 36.0                     # Min latitude
+    top: 37.5                        # Max latitude
+  wkt: ""
 ```
 
-### Step 3: update `MPASWorkflow`
+### 5.2 Variable-Resolution MPAS / JIGSAW Mesh (`examples/mpas/workflow_config.yaml`)
 
-Refactor `build_case()` so it builds a `MeshSpec` first, then uses that to construct the runtime case object.
+```yaml
+# ==============================================================================
+# Tier 1 Specification: Variable-Resolution MPAS Unstructured Mesh Workflow
+# ==============================================================================
+workflow:
+  date: "20260901"                                # Run date
+  mesh_type: mpas                                 # Target mesh family
+  case_index: 1
+  model: jigsaw                                   # Backend generator
+  debug: true
+  largest_outlets: 10                             # Basin outlets to retain
+  run_on_hpc: false                               # Set true for SLURM batch scripts
 
-### Step 4: make runtime objects adapter-only
+resolutions:
+  ocean_km: 100                                   # Coarse ocean cells
+  land_km: 50.0                                   # Regional land background
+  river_network_km: 5                             # River corridor refinement
+  coastline_km: 10                                # Coastal buffer refinement
+  lake_boundary_km: 5                             # Lake perimeter refinement
+  watershed_boundary_km: 5                        # Watershed divide refinement
 
-The runtime case should read from the compiled spec, not re-create independent science-level settings.
+paths:
+  input_workspace: /data/global/input
+  output_workspace: /scratch/earthmesh/mpas
+  river_network_vector: /data/vector/flowlines.geojson
+  river_network_raster: /data/raster/river_networks.tif
+  lake_boundary_vector: /data/vector/lakes.geojson
+  lake_boundary_raster: /data/raster/lakes.tif
+  watershed_boundary_raster: /data/raster/basins.tif
+  coastline_raster: /data/raster/coastline.tif
+  region_geometry: /data/vector/region.geojson
+  dam_vector: ""
 
-### Step 5: add a registry for future mesh types
+jigsaw:
+  standalone: true                                # Run standalone generator
+  create_directory: true                          # Auto-create case subfolder
+  hours: 3                                        # SLURM walltime allocation
+  slurm: cpu_single                               # SLURM partition
+  ncolumn_space: 3600                             # Spacing grid lon resolution
+  nrow_space: 1800                                # Spacing grid lat resolution
+  iFlag_geom: true                                # Build boundary geometry (.msh)
+  iFlag_spac: true                                # Build spacing field (.msh)
+  iFlag_spac_ocean: true
+  iFlag_spac_land: true
+  iFlag_geom_river_network: true
+  iFlag_spac_river_network: true
+  iFlag_geom_lake_boundary: true
+  iFlag_spac_lake_boundary: true
+  iFlag_spac_watershed_boundary: true
+  iFlag_spac_coastline: true
+```
 
-The factory should register supported mesh classes without embedding all logic into a single `if/elif` chain.
+### 5.3 HEALPix Spherical Mesh (`examples/healpix/workflow_config.yaml`)
+
+```yaml
+# ==============================================================================
+# Tier 1 Specification: Equal-Area HEALPix Spherical Mesh Workflow
+# ==============================================================================
+workflow:
+  date: null
+  mesh_type: healpix
+  case_index: 1
+  model: healpix
+  debug: false
+  run_on_hpc: false
+
+resolutions:
+  meter: 5000                        # Target cell diameter (5 km)
+
+paths:
+  output_workspace: ../../data/healpix/5km
+  output_mesh: healpix_mesh.geojson
+
+features:
+  use_tiles: true                    # Tiled multi-file output
+  tile_mode: base                    # 'base' (12 base diamonds) or 'simple'
+```
+
+### 5.4 ISEA3H Hexagonal DGGS Mesh (`examples/isea/workflow_config.yaml`)
+
+```yaml
+# ==============================================================================
+# Tier 1 Specification: ISEA3H Discrete Global Grid System (DGGS) Workflow
+# ==============================================================================
+workflow:
+  date: null
+  mesh_type: isea
+  case_index: 1
+  model: isea
+  debug: false
+  run_on_hpc: false
+
+resolutions:
+  meter: 1000.0                      # Target hexagon resolution (1 km)
+
+paths:
+  output_workspace:
+    Linux: /compyfs/user/earthmesh/isea3h/1km     # HPC cluster path
+    default: ./output/isea3h/1km                 # Local fallback
+  output_mesh: isea3h_mesh.geojson
+
+features:
+  isea_type: ISEA3H                  # Aperture 3 Hexagon
+  use_tiles: false
+  tile_mode: simple
+  convert_to_parquet: true           # Export attributes to Parquet
+  check_mesh_quality: true           # Topological & distortion checks
+```
+
+### 5.5 rHEALPix DGGS Mesh (`examples/rhealpix/workflow_config.yaml`)
+
+```yaml
+# ==============================================================================
+# Tier 1 Specification: rHEALPix Discrete Global Grid System (DGGS) Workflow
+# ==============================================================================
+workflow:
+  date: null
+  mesh_type: rhealpix
+  case_index: 1
+  model: rhealpix
+  debug: false
+  run_on_hpc: false
+
+resolutions:
+  meter: 10000.0                     # Cell width (10 km)
+
+paths:
+  output_workspace:
+    Linux: /compyfs/user/earthmesh/rhealpix/10km
+    default: ./output/rhealpix/10km
+  output_mesh: rhealpix_mesh.geojson
+
+features:
+  use_tiles: true                    # Partition across 6 base square facets
+  tile_mode: base
+  convert_to_parquet: true
+```
 
 ---
 
-## 11. Acceptance criteria
+## 6. Implementation Architecture
 
-The design is successful when:
+### 6.1 Configuration Manager (`pyearthmesh/config/config_manager.py`)
 
-- each mesh type owns a workflow class,
-- JSON config remains the front-end specification,
-- there is a single canonical compiled representation,
-- runtime execution objects do not redefine domain intent,
-- adding a new mesh type requires only a mesh-specific workflow and backend adapter,
-- there is no intermediate generated config file in the primary execution path.
+- `load_workflow_config(filename: str | Path) -> dict[str, Any]`:
+  - Resolves path: if directory, automatically discovers `workflow_config.yaml`, `workflow_config.yml`, or `workflow_config.json`. If extensionless stem, checks `.yaml`, `.yml`, `.json`.
+  - Parses YAML with comments using `yaml.safe_load()`.
+  - Parses JSON using `json.load()`.
+  - Merges loaded dictionary with `DEFAULT_CONFIG`.
+  - Resolves platform-specific paths (`Linux`, `Windows`, `Darwin`, `default`).
+  - Normalizes run date.
+- `dump_workflow_config(config: dict, filename: str | Path, fmt: str | None = None) -> None`:
+  - Exports workflow dictionary to `.yaml` or `.json`.
+  - Excludes internal non-serializable fields (e.g. `config_file` object).
+- `compile_workflow(spec_or_config) -> dict[str, Any]`:
+  - Dispatches to registered mesh-family compiler.
+- `create_workflow(config_or_path) -> BaseWorkflow`:
+  - Factory function instantiating the mesh workflow with in-memory case adapter.
+
+### 6.2 Base Classes & Adapters (`pyearthmesh/config/workflows/`)
+
+- `WorkflowSpec`: Dataclass capturing frontend domain intent.
+- `BaseWorkflow`: Base class defining `compile_from_spec()`, `build_case()`, `setup()`, `run()`, `create_hpc_job()`.
+- `BaseCase`: Abstract case adapter providing `.output_workspace`, `.mesh_file`, `.setup()`, `.run()`, `.create_hpc_job()`.
 
 ---
 
-## 12. Recommended direction for this project
+## 7. Acceptance & Verification Criteria
 
-The right target architecture for `pyearthmesh` is:
-
-- Frontend config manager
-- mesh-type workflow compiler
-- canonical compiled mesh specification
-- mesh-specific runtime execution backend
-
-This is the correct analog of a scientific compiler pipeline and is the design that scales well across many mesh types.
+1. **Comment Support:** Users can freely add `# comments` throughout workflow files without triggering parser errors.
+2. **Dual-Format Parity:** Equivalent `.yaml` and `.json` workflow specifications compile to identical backend-native configs (verified via unit test `test_yaml_and_json_parity_for_examples`).
+3. **Directory & Stem Auto-Discovery:** `create_workflow(dir_path)` and `create_workflow(stem_without_ext)` seamlessly resolve the configuration file.
+4. **Clean Serialization:** `dump_workflow_config()` writes clean YAML or JSON files that reload identically.
+5. **No Regressions:** All existing workflows (`MPASWorkflow`, `LatLonWorkflow`, `HealpixWorkflow`, `ISEAWorkflow`, `RHEALPixWorkflow`) maintain full backward compatibility.

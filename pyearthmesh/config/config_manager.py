@@ -4,12 +4,18 @@ from pathlib import Path
 from typing import Any
 
 # ==============================================================================
-# Workflow configuration loader (merged from the former workflow_config.py)
+# Workflow configuration loader and dumper
 #
-# This is the single, sectioned, human-editable configuration schema.  It is the
+# This is the single, sectioned, human-editable configuration schema. It is the
 # one and only source of truth for a run; there is no intermediate flat config
-# file any more.  ``load_workflow_config`` resolves platform-specific and
-# relative paths and normalises the run date.
+# file any more.
+#
+# Primary format is YAML (.yaml / .yml) to allow inline and block comments (#),
+# making workflow specifications transparent and user-friendly. JSON (.json)
+# is also supported for programmatic workflows and backward compatibility.
+#
+# ``load_workflow_config`` resolves platform-specific and relative paths and
+# normalises the run date.
 # ==============================================================================
 
 DEFAULT_CONFIG: dict[str, dict[str, Any]] = {
@@ -36,10 +42,27 @@ DEFAULT_CONFIG: dict[str, dict[str, Any]] = {
         "dam_km": None,
         "city_km": None,
     },
+    "flags": {
+        "global": False,
+        "mesh_boundary": False,
+        "save_mesh": True,
+        "visualization": False,
+        "rotation": False,
+        "use_tiles": False,
+        "netcdf": False,
+        "check_mesh_quality": False,
+        "convert_to_parquet": False,
+    },
     "paths": {
         "input_workspace": "",
+        "workspace_input": "",
         "output_workspace": "./output",
-        "hydrosheds_rivers": "",
+        "workspace_output": "./output",
+        "mesh_boundary_file": "",
+        "mesh_boundary": "",
+        "mesh_netcdf": "",
+        "boundary_file": "",
+        "boundary_vector": "",
         "region_geometry": "",
         "dam_vector": "",
         "city_vector": "",
@@ -61,6 +84,7 @@ DEFAULT_CONFIG: dict[str, dict[str, Any]] = {
         "longitude_right": None,
         "latitude_bot": None,
         "latitude_top": None,
+        "boundary_file": "",
     },
     "features": {
         "coastline": False,
@@ -129,9 +153,12 @@ DEFAULT_CONFIG: dict[str, dict[str, Any]] = {
 def _merge(
     defaults: dict[str, Any], values: dict[str, Any], section: str
 ) -> dict[str, Any]:
-    unknown = set(values) - set(defaults)
-    if unknown:
-        raise ValueError(f"Unknown {section} setting(s): {', '.join(sorted(unknown))}")
+    if section != "flags":
+        unknown = set(values) - set(defaults)
+        if unknown:
+            raise ValueError(
+                f"Unknown {section} setting(s): {', '.join(sorted(unknown))}"
+            )
     result = defaults.copy()
     result.update(values)
     return result
@@ -150,28 +177,90 @@ def _select_platform_path(value: Any) -> str:
     return selected
 
 
-def load_workflow_config(filename: str | Path) -> dict[str, Any]:
-    """Load a workflow JSON file, apply defaults, and resolve relative paths."""
-    filename = Path(filename).expanduser().resolve()
-    with filename.open(encoding="utf-8") as config_file:
-        raw = json.load(config_file)
+def _resolve_config_path(filename: str | Path) -> Path:
+    path = Path(filename).expanduser().resolve()
+    if path.is_dir():
+        for candidate_name in (
+            "workflow_config.yaml",
+            "workflow_config.yml",
+            "workflow_config.json",
+        ):
+            candidate = path / candidate_name
+            if candidate.is_file():
+                return candidate
+        raise FileNotFoundError(
+            f"No workflow configuration file (workflow_config.yaml, workflow_config.yml, "
+            f"or workflow_config.json) found in directory: {path}"
+        )
+    if not path.is_file():
+        for ext in (".yaml", ".yml", ".json"):
+            candidate = path.with_suffix(ext)
+            if candidate.is_file():
+                return candidate
+    return path
+
+
+def _parse_config_file(path: Path) -> dict[str, Any]:
+    ext = path.suffix.lower()
+    if ext in (".yaml", ".yml"):
+        try:
+            import yaml
+        except ImportError as exc:
+            raise ImportError(
+                "PyYAML is required to parse YAML workflow configuration files. "
+                "Please install pyyaml with `pip install pyyaml` or `conda install pyyaml`."
+            ) from exc
+        with path.open(encoding="utf-8") as f:
+            raw = yaml.safe_load(f)
+    elif ext == ".json":
+        with path.open(encoding="utf-8") as f:
+            raw = json.load(f)
+    else:
+        # Fallback: attempt YAML first (YAML parser also accepts JSON and comments), then JSON
+        try:
+            import yaml
+
+            with path.open(encoding="utf-8") as f:
+                raw = yaml.safe_load(f)
+        except Exception:
+            with path.open(encoding="utf-8") as f:
+                raw = json.load(f)
+
+    if raw is None:
+        raw = {}
     if not isinstance(raw, dict):
-        raise ValueError("Workflow configuration must contain a JSON object")
-    raw_dict: dict[str, Any] = raw
+        raise ValueError(
+            f"Workflow configuration in {path} must contain a mapping/dictionary object"
+        )
+    return raw
+
+
+def load_workflow_config(filename: str | Path) -> dict[str, Any]:
+    """Load a workflow YAML or JSON file, apply defaults, and resolve relative paths.
+
+    Supports:
+        - YAML (.yaml, .yml) with inline/block comments (#)
+        - JSON (.json) for backward compatibility
+        - Directory paths containing workflow_config.yaml / .yml / .json
+        - Path stems without file extension
+    """
+    resolved_path = _resolve_config_path(filename)
+    raw_dict = _parse_config_file(resolved_path)
+
     config: dict[str, Any] = {
         section: _merge(DEFAULT_CONFIG[section], raw_dict.get(section, {}), section)
         for section in DEFAULT_CONFIG
     }
-    config["config_file"] = filename
+    config["config_file"] = resolved_path
     for key, value in config["paths"].items():
         if key == "output_mesh":
             continue
         value = _select_platform_path(value)
         if value:
-            path = Path(value).expanduser()
-            if not path.is_absolute():
-                path = filename.parent / path
-            config["paths"][key] = str(path.resolve())
+            p = Path(value).expanduser()
+            if not p.is_absolute():
+                p = resolved_path.parent / p
+            config["paths"][key] = str(p.resolve())
         else:
             config["paths"][key] = ""
     if not config["workflow"]["date"]:
@@ -179,6 +268,165 @@ def load_workflow_config(filename: str | Path) -> dict[str, Any]:
 
         config["workflow"]["date"] = datetime.now().strftime("%Y%m%d")
     return config
+
+
+def dump_workflow_config(
+    config: dict[str, Any],
+    filename: str | Path,
+    fmt: str | None = None,
+) -> None:
+    """Dump a workflow configuration dictionary to a YAML or JSON file.
+
+    Args:
+        config (dict[str, Any]): Workflow configuration dictionary.
+        filename (str | Path): Destination file path.
+        fmt (str | None): Target format ('yaml', 'yml', or 'json'). If None,
+            inferred from filename suffix (defaults to 'yaml').
+    """
+    dest = Path(filename).expanduser().resolve()
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
+    if fmt is None:
+        ext = dest.suffix.lower()
+        if ext in (".yaml", ".yml"):
+            fmt = "yaml"
+        elif ext == ".json":
+            fmt = "json"
+        else:
+            fmt = "yaml"
+    else:
+        fmt = fmt.lower()
+
+    # Clean serializable dictionary: exclude internal 'config_file' and convert Path to str
+    export_dict: dict[str, Any] = {}
+    for section, sec_data in config.items():
+        if section == "config_file":
+            continue
+        if isinstance(sec_data, dict):
+            export_dict[section] = {
+                k: str(v) if isinstance(v, Path) else v for k, v in sec_data.items()
+            }
+        else:
+            export_dict[section] = (
+                str(sec_data) if isinstance(sec_data, Path) else sec_data
+            )
+
+    if fmt in ("yaml", "yml"):
+        try:
+            import yaml
+        except ImportError as exc:
+            raise ImportError(
+                "PyYAML is required to write YAML workflow configuration files. "
+                "Please install pyyaml with `pip install pyyaml`."
+            ) from exc
+        with dest.open("w", encoding="utf-8") as f:
+            yaml.safe_dump(export_dict, f, sort_keys=False, default_flow_style=False)
+    elif fmt == "json":
+        with dest.open("w", encoding="utf-8") as f:
+            json.dump(export_dict, f, indent=2)
+    else:
+        raise ValueError(f"Unsupported format {fmt!r}. Expected 'yaml' or 'json'.")
+
+
+def create_model_configuration(
+    filename: str | Path,
+    mesh_type: str = "mpas",
+    case_index: int = 1,
+    date: str | None = None,
+    resolution_meter: float | None = None,
+    resolution_degree: float | None = None,
+    workspace_input: str | Path | None = None,
+    workspace_output: str | Path | None = None,
+    region: dict[str, Any] | None = None,
+    fmt: str | None = None,
+    **kwargs: Any,
+) -> dict[str, Any]:
+    """Generate a PyEarthMesh template configuration file in YAML or JSON.
+
+    Supports:
+        - YAML (.yaml / .yml): human-friendly, sectioned format with comments
+        - JSON (.json): programmatic format
+        - Automatic format detection via file extension or fmt parameter
+
+    Args:
+        filename (str | Path): Destination configuration file path.
+        mesh_type (str): Target mesh type (e.g. 'mpas', 'hexagon', 'square', 'latlon', 'tin').
+        case_index (int): Case index number.
+        date (str | None): Simulation run date (YYYYMMDD). Defaults to today.
+        resolution_meter (float | None): Resolution in meters.
+        resolution_degree (float | None): Resolution in degrees.
+        workspace_input (str | Path | None): Input workspace directory.
+        workspace_output (str | Path | None): Output workspace directory.
+        region (dict[str, Any] | None): Region definition dictionary (e.g. bbox).
+        fmt (str | None): Target format ('yaml' or 'json'). Inferred from extension if None.
+        **kwargs: Additional section overrides or configuration parameters.
+
+    Returns:
+        dict[str, Any]: The configuration dictionary written to disk.
+    """
+    import copy
+    from datetime import datetime
+
+    dest = Path(filename).expanduser().resolve()
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
+    if fmt is None:
+        ext = dest.suffix.lower()
+        fmt = "json" if ext == ".json" else "yaml"
+    else:
+        fmt = fmt.lower()
+
+    date_str = date or datetime.now().strftime("%Y%m%d")
+    ws_in = str(workspace_input) if workspace_input else ""
+    ws_out = str(workspace_output) if workspace_output else "./output"
+
+    config_data = copy.deepcopy(DEFAULT_CONFIG)
+    config_data["workflow"]["mesh_type"] = mesh_type.lower()
+    config_data["workflow"]["case_index"] = int(case_index)
+    config_data["workflow"]["date"] = date_str
+
+    if resolution_meter is not None:
+        config_data["resolutions"]["meter"] = float(resolution_meter)
+    if resolution_degree is not None:
+        config_data["resolutions"]["degree"] = float(resolution_degree)
+
+    config_data["paths"]["workspace_input"] = ws_in
+    config_data["paths"]["input_workspace"] = ws_in
+    config_data["paths"]["workspace_output"] = ws_out
+    config_data["paths"]["output_workspace"] = ws_out
+
+    if region is not None and isinstance(region, dict):
+        config_data["region"].update(region)
+
+    for k, v in kwargs.items():
+        if (
+            k in config_data
+            and isinstance(config_data[k], dict)
+            and isinstance(v, dict)
+        ):
+            config_data[k].update(v)
+        else:
+            matched = False
+            for section in (
+                "workflow",
+                "resolutions",
+                "flags",
+                "paths",
+                "region",
+                "features",
+            ):
+                if k in config_data[section]:
+                    config_data[section][k] = v
+                    matched = True
+                    break
+            if not matched:
+                config_data.setdefault("custom", {})[k] = v
+
+    dump_workflow_config(config_data, dest, fmt=fmt)
+    return config_data
+
+
+create_mesh_template_configuration_file = create_model_configuration
 
 
 # ==============================================================================
@@ -222,8 +470,17 @@ def _workflow_spec_from_config(config: dict[str, Any], mesh_type: str) -> Workfl
     """Normalize a loaded sectioned workflow config into the frontend spec."""
     workflow = config.get("workflow", {}) or {}
     paths = config.get("paths", {}) or {}
+    flags = config.get("flags", {}) or {}
     region = dict(config.get("region", {}) or {})
     region.setdefault("geometry", paths.get("region_geometry"))
+    boundary_file = (
+        paths.get("mesh_boundary_file")
+        or paths.get("mesh_boundary")
+        or paths.get("boundary_file")
+        or paths.get("boundary_vector")
+    )
+    if boundary_file:
+        region.setdefault("boundary_file", boundary_file)
 
     return WorkflowSpec.from_dict(
         {
@@ -233,6 +490,7 @@ def _workflow_spec_from_config(config: dict[str, Any], mesh_type: str) -> Workfl
             "region": region,
             "resolution": config.get("resolutions", {}) or {},
             "paths": paths,
+            "flags": flags,
             "execution": {
                 "debug": workflow.get("debug", False),
                 "model": workflow.get("model", "jigsaw"),
@@ -291,12 +549,12 @@ def compile_workflow(spec_or_config):
 
 
 def create_workflow(config_or_path):
-    """Build the workflow object for a loaded config dict or a JSON file path.
+    """Build the workflow object for a loaded config dict or a YAML/JSON file path.
 
     Args:
         config_or_path (dict | str | Path): Either an already-loaded config
-            (as returned by ``load_workflow_config``) or a path to a workflow
-            JSON file.
+            (as returned by ``load_workflow_config``), a path to a workflow
+            YAML/JSON file, or a directory containing a workflow configuration.
 
     Returns:
         BaseWorkflow: An instantiated workflow object with its case built.
