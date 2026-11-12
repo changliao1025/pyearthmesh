@@ -1,5 +1,9 @@
 ### PyEarthMesh
 
+[![License](https://img.shields.io/badge/license-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![PyPI Downloads](https://static.pepy.tech/badge/pyearthmesh)](https://pepy.tech/project/pyearthmesh)
+[![Conda Downloads](https://anaconda.org/conda-forge/pyearthmesh/badges/downloads.svg)](https://anaconda.org/conda-forge/pyearthmesh)
+
 PyEarthMesh is a lightweight mesh generation and manipulation package for Earth science applications.
 
 Every hiker/camper would love to have a leatherman pocket knife around because it is lightweight, versatile and reliable, sometimes life saving.
