@@ -22,56 +22,6 @@ DEFAULT_FIELD_WIDTH = 20
 COORDINATE_FILL_VALUE = -9999.0
 
 
-def _validate_mesh_parameters(
-    longitude_left: float,
-    latitude_bottom: float,
-    resolution_degrees: float,
-    num_columns: int,
-    num_rows: int,
-    output_filename: str,
-) -> None:
-    """
-    Validate input parameters for mesh creation.
-
-    Args:
-        longitude_left: Left boundary longitude
-        latitude_bottom: Bottom boundary latitude
-        resolution_degrees: Cell resolution in degrees
-        num_columns: Number of columns
-        num_rows: Number of rows
-        output_filename: Output file path
-
-    Raises:
-        ValueError: If any parameter is invalid
-        FileNotFoundError: If output directory doesn't exist
-    """
-    if not (-180.0 <= longitude_left <= 180.0):
-        raise ValueError(
-            f"Longitude must be between -180 and 180 degrees, got {longitude_left}"
-        )
-
-    if not (-90.0 <= latitude_bottom <= 90.0):
-        raise ValueError(
-            f"Latitude must be between -90 and 90 degrees, got {latitude_bottom}"
-        )
-
-    if resolution_degrees <= 0:
-        raise ValueError(f"Resolution must be positive, got {resolution_degrees}")
-
-    if num_columns <= 0 or num_rows <= 0:
-        raise ValueError(
-            f"Columns and rows must be positive integers, got columns={num_columns}, rows={num_rows}"
-        )
-
-    if not isinstance(output_filename, str) or not output_filename.strip():
-        raise ValueError("Output filename must be a non-empty string")
-
-    # Check if output directory exists
-    output_dir = os.path.dirname(output_filename)
-    if output_dir and not os.path.exists(output_dir):
-        raise FileNotFoundError(f"Output directory does not exist: {output_dir}")
-
-
 def _create_boundary_geometry(
     longitude_left: float,
     latitude_bottom: float,

@@ -17,7 +17,7 @@ workflow:
 
 # Spatial resolution settings
 resolutions:
-  degree: 0.16666666666666666        # Angular resolution (~20 km cell spacing at equator)
+  degree: 0.1        # Angular resolution (~20 km cell spacing at equator)
 
 # Geographic extent constraints
 region:
@@ -31,14 +31,14 @@ region:
 # Mesh generation and boundary flags
 flags:
   global: false                      # Regional mesh constrained to bounding box / boundary
-  mesh_boundary: false               # Crop mesh using vector boundary (false = use bbox)
+  mesh_boundary: true               # Crop mesh using vector boundary (false = use bbox)
   save_mesh: true                    # Export mesh to GeoJSON/disk
   visualization: false               # Enable map visualization output
   rotation: false                    # Grid orientation rotation
 
 # File and workspace path configurations
 paths:
-  output_workspace: ../../data/qinghaihu   # Output directory (relative to this YAML file)
-  output_mesh: lake_latlon_20km.geojson     # Generated mesh output filename
-  mesh_boundary: ""                        # Vector boundary file (GeoJSON/SHP)
+  output_workspace: ../../data/yellowriver   # Output directory (relative to this YAML file)
+  output_mesh: lake_latlon_0.1degree.geojson     # Generated mesh output filename
+  mesh_boundary: /Users/changliao/data/hexwatershed/huanghe/vector/basin_boundary/merged.geojson                       # Vector boundary file (GeoJSON/SHP)
   region_geometry: ""                      # Optional vector boundary file (GeoJSON/SHP)
