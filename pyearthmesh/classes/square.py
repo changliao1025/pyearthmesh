@@ -523,11 +523,14 @@ class pysquare(pymeshcell):
             "pPoint_start",
             "pPoint_end",
             "pBound",
+            "dElevation_profile0",
         ]
 
         obj = self.__dict__.copy()
         for sKey in aSkip:
             obj.pop(sKey, None)
+        if obj.get("aElevation_profile") is None:
+            obj.pop("aElevation_profile", None)
 
         sJson = json.dumps(
             obj, sort_keys=True, indent=4, ensure_ascii=True, cls=SquareClassEncoder

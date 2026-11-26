@@ -160,7 +160,27 @@ def create_mpas_mesh(
         pFeature = ogr.Feature(pLayerDefn)
 
     if iFlag_run_jigsaw_in == 1:
+        from pyearthmesh.classes.meshconfig import JigsawConfig
         from pyearthmesh.meshes.unstructured.jigsaw.run_jigsaw import run_jigsaw
+
+        if aConfig_jigsaw_in is None:
+            aConfig_jigsaw_in = JigsawConfig().get_default_config()
+        elif isinstance(aConfig_jigsaw_in, dict):
+            default_config = JigsawConfig().get_default_config()
+            default_config.update(aConfig_jigsaw_in)
+            aConfig_jigsaw_in = default_config
+
+        # Ensure jigsaw binary and environment paths are in PATH
+        import sys
+
+        sys_bin = os.path.join(sys.prefix, "bin")
+        current_path = os.environ.get("PATH", "")
+        if sys_bin not in current_path:
+            os.environ["PATH"] = sys_bin + os.pathsep + current_path
+            current_path = os.environ["PATH"]
+        if sWorkspace_jigsaw_in and os.path.isdir(sWorkspace_jigsaw_in):
+            if sWorkspace_jigsaw_in not in current_path:
+                os.environ["PATH"] = sWorkspace_jigsaw_in + os.pathsep + current_path
 
         projector = [0.0, 0.0]
         geom, gprj, mesh, mprj = run_jigsaw(

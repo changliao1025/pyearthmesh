@@ -190,7 +190,23 @@ def run_jigsaw(
     gprj = jigsawpy.jigsaw_msh_t()
 
     # ------------------------------------ setup via user COMPOSE
+    import sys
+
+    sys_bin = os.path.join(sys.prefix, "bin")
+    current_path = os.environ.get("PATH", "")
+    if sys_bin not in current_path:
+        os.environ["PATH"] = sys_bin + os.pathsep + current_path
+        current_path = os.environ["PATH"]
+    if sWorkspace_jigsaw_in and os.path.isdir(sWorkspace_jigsaw_in):
+        if sWorkspace_jigsaw_in not in current_path:
+            os.environ["PATH"] = sWorkspace_jigsaw_in + os.pathsep + current_path
+
     FULL_SPHERE_RADIUS = +6371.0  # unit check
+    if aConfig_in is None:
+        from pyearthmesh.classes.meshconfig import JigsawConfig
+
+        aConfig_in = JigsawConfig().get_default_config()
+
     if aConfig_in is not None:
         if "ncolumn_space" in aConfig_in:
             ncolumn_space = aConfig_in["ncolumn_space"]
@@ -323,12 +339,12 @@ def run_jigsaw(
             hfun_scal = "absolute"
 
         if "hfun_hmax" in aConfig_in:
-            hfun_hmax = aConfig_in["hfun_hmax"]
+            hfun_hmax = float(aConfig_in["hfun_hmax"])
         else:
             hfun_hmax = float("inf")  # null spacing lim
 
         if "hfun_hmin" in aConfig_in:
-            hfun_hmin = aConfig_in["hfun_hmin"]
+            hfun_hmin = float(aConfig_in["hfun_hmin"])
         else:
             hfun_hmin = float(+0.00)
 
@@ -433,6 +449,8 @@ def run_jigsaw(
 
         iFlag_RRS18to6_ocean = False
 
+        spac_mshID = "ellipsoid-grid"
+
         hfun_scal = "absolute"
         hfun_hmax = float("inf")  # null spacing lim
         hfun_hmin = float(+0.00)
@@ -446,10 +464,9 @@ def run_jigsaw(
         dResolution_ocean = 100.0
 
     geom = jigsawpy.jigsaw_msh_t()
+    geom.mshID = geom_mshID
+    geom.radii = np.full(3, FULL_SPHERE_RADIUS, dtype=geom.REALS_t)
     if iFlag_geom:
-        geom.mshID = geom_mshID
-        geom.radii = np.full(3, FULL_SPHERE_RADIUS, dtype=geom.REALS_t)
-
         poly = jigsawpy.jigsaw_msh_t()
         nPolygon = 1
         print("BUILDING MESH GEOM.")
@@ -877,15 +894,14 @@ def run_jigsaw(
 
     opts = jigsawpy.jigsaw_jig_t()
     opts.verbosity = 1
-    if iFlag_opts:
-        opts.hfun_scal = hfun_scal
-        opts.hfun_hmax = hfun_hmax
-        opts.hfun_hmin = hfun_hmin
-        opts.mesh_dims = mesh_dims
-        opts.bisection = bisection
-        opts.optm_qlim = optm_qlim
-        opts.optm_iter = optm_iter
-        opts.optm_qtol = optm_qtol
+    opts.hfun_scal = hfun_scal
+    opts.hfun_hmax = hfun_hmax
+    opts.hfun_hmin = hfun_hmin
+    opts.mesh_dims = mesh_dims
+    opts.bisection = bisection
+    opts.optm_qlim = optm_qlim
+    opts.optm_iter = optm_iter
+    opts.optm_qtol = optm_qtol
 
     init = jigsawpy.jigsaw_msh_t()
     if iFlag_init:
@@ -980,7 +996,11 @@ def run_jigsaw(
     gprj = copy.deepcopy(geom)  # local 2d objects
     mprj = copy.deepcopy(mesh)
 
-    if mesh.vert3.size > +0:
+    if (
+        getattr(mesh.vert3, "size", 0) > 0
+        and getattr(mesh, "point", None) is not None
+        and getattr(mesh.point, "size", 0) > 0
+    ):
         project(geom, mesh, gprj, mprj, projector)
 
     # ------------------------------------ assign IDtag's to cell
@@ -996,23 +1016,29 @@ def run_jigsaw(
 
     # ------------------------------------ check mesh for quality
 
-    cost = jigsawpy.triscr2(  # quality metrics!
-        mesh.point["coord"], mesh.tria3["index"]
-    )
+    if (
+        getattr(mesh, "point", None) is not None
+        and getattr(mesh.point, "size", 0) > 0
+        and getattr(mesh, "tria3", None) is not None
+        and getattr(mesh.tria3, "size", 0) > 0
+    ):
+        cost = jigsawpy.triscr2(  # quality metrics!
+            mesh.point["coord"], mesh.tria3["index"]
+        )
 
-    print("TRISCR =", np.min(cost), np.mean(cost))
+        print("TRISCR =", np.min(cost), np.mean(cost))
 
-    cost = jigsawpy.pwrscr2(mesh.point["coord"], mesh.power, mesh.tria3["index"])
+        cost = jigsawpy.pwrscr2(mesh.point["coord"], mesh.power, mesh.tria3["index"])
 
-    print("PWRSCR =", np.min(cost), np.mean(cost))
+        print("PWRSCR =", np.min(cost), np.mean(cost))
 
-    tbad = jigsawpy.centre2(mesh.point["coord"], mesh.power, mesh.tria3["index"])
+        tbad = jigsawpy.centre2(mesh.point["coord"], mesh.power, mesh.tria3["index"])
 
-    print("OBTUSE =", +np.count_nonzero(np.logical_not(tbad)))
+        print("OBTUSE =", +np.count_nonzero(np.logical_not(tbad)))
 
-    ndeg = jigsawpy.trideg2(mesh.point["coord"], mesh.tria3["index"])
+        ndeg = jigsawpy.trideg2(mesh.point["coord"], mesh.tria3["index"])
 
-    print("TOPOL. =", +np.count_nonzero(ndeg == +6) / ndeg.size)
+        print("TOPOL. =", +np.count_nonzero(ndeg == +6) / ndeg.size)
 
     # ------------------------------------ save mesh for Paraview
 

@@ -95,7 +95,8 @@ class pymeshcell(pypolygon):
         dLongitude_center_degree (float): Longitude of cell center in degrees
         dLatitude_center_degree (float): Latitude of cell center in degrees
         dElevation_mean (float): Mean elevation of the cell (default: -9999.0)
-        dElevation_profile0 (float): Elevation profile parameter (default: 0.0)
+        dElevation_profile0 (float): Elevation profile parameter (10th percentile) (default: 0.0)
+        aElevation_profile (Optional[List[float]]): 10-level elevation profile quantiles (10% to 100%) (default: None)
         dLength_flowline (float): Total length of flowlines in cell (default: 0.0)
         iFlag_intersected (int): Flag indicating intersection status (default: -1)
         iFlag_coast (int): Flag indicating if cell is coastal (default: 0)
@@ -229,6 +230,7 @@ class pymeshcell(pypolygon):
         # Elevation properties
         self.dElevation_mean: float = -9999.0
         self.dElevation_profile0: float = 0.0
+        self.aElevation_profile: Optional[List[float]] = None
 
         # Flowline properties
         self.dLength_flowline: float = 0.0
@@ -350,11 +352,14 @@ class pymeshcell(pypolygon):
             "pPoint_start",
             "pPoint_end",
             "pBound",
+            "dElevation_profile0",
         ]
 
         obj = self.__dict__.copy()
         for sKey in aSkip:
             obj.pop(sKey, None)
+        if obj.get("aElevation_profile") is None:
+            obj.pop("aElevation_profile", None)
 
         sJson = json.dumps(
             obj, sort_keys=True, indent=4, ensure_ascii=True, cls=CellClassEncoder
@@ -525,6 +530,11 @@ class pymeshcell(pypolygon):
         new_cell.dz_center = self.dz_center
         new_cell.dElevation_mean = self.dElevation_mean
         new_cell.dElevation_profile0 = self.dElevation_profile0
+        new_cell.aElevation_profile = (
+            self.aElevation_profile.copy()
+            if self.aElevation_profile is not None
+            else None
+        )
         new_cell.dLength_flowline = self.dLength_flowline
         new_cell.iFlag_intersected = self.iFlag_intersected
         new_cell.iFlag_coast = self.iFlag_coast

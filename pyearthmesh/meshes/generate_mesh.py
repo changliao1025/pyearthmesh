@@ -425,6 +425,17 @@ def generate_mesh(
         "sFilename_jigsaw_mesh_netcdf"
     )
     _aConfig_jigsaw = aConfig_jigsaw or _get("aConfig_jigsaw") or _get("jigsaw")
+    if _aConfig_jigsaw is None and _iFlag_run_jigsaw == 1:
+        from pyearthmesh.classes.meshconfig import JigsawConfig
+
+        _aConfig_jigsaw = JigsawConfig().get_default_config()
+    if isinstance(_aConfig_jigsaw, dict):
+        if _dResolution_meter is not None:
+            _res_km = _dResolution_meter / 1000.0
+            if "dResolution_river_network" not in _aConfig_jigsaw:
+                _aConfig_jigsaw["dResolution_river_network"] = _res_km
+            if "dResolution_watershed_boundary" not in _aConfig_jigsaw:
+                _aConfig_jigsaw["dResolution_watershed_boundary"] = _res_km
     _iResolution_index = (
         iResolution_index
         if iResolution_index is not None

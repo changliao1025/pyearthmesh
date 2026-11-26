@@ -86,7 +86,7 @@ class JigsawConfig(BaseMeshConfig):
             "sFilename_lake_boundary_vector": None,  # Lake boundary vector file
             "sFilename_lake_boundary_raster": None,  # Lake boundary raster file
             # Mesh sizing parameters
-            "hfun_hmax": "inf",  # Max. refinement function value
+            "hfun_hmax": float("inf"),  # Max. refinement function value
             "hfun_hmin": 0.0,  # Min. refinement function value
             "hfun_scal": "absolute",  # Scaling type: "relative" or "absolute"
             "mesh_dims": 2,  # Mesh dimension (2 for surface)
