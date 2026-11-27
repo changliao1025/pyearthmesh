@@ -278,6 +278,11 @@ class BaseWorkflow(ABC):
         if "rotation" in flags:
             native_config["iFlag_rotation"] = 1 if flags["rotation"] else 0
 
+        if "fill_holes" in flags:
+            native_config["iFlag_fill_hole"] = 1 if flags["fill_holes"] else 0
+        elif "fill_hole" in flags:
+            native_config["iFlag_fill_hole"] = 1 if flags["fill_hole"] else 0
+
         if "use_mesh_dem" in flags:
             native_config["iFlag_use_mesh_dem"] = 1 if flags["use_mesh_dem"] else 0
 

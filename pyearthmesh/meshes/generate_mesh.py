@@ -210,6 +210,7 @@ def generate_mesh(
     iFlag_global: int | None = None,
     iFlag_save_mesh: int | None = None,
     iFlag_rotation: int | None = None,
+    iFlag_fill_hole: int | None = None,
     iFlag_use_mesh_dem: int | None = None,
     iFlag_land_ocean_mask: int | None = None,
     sFilename_land_ocean_mask: str | None = None,
@@ -279,6 +280,11 @@ def generate_mesh(
     )
     _iFlag_rotation = (
         iFlag_rotation if iFlag_rotation is not None else _get("iFlag_rotation", 0)
+    )
+    _iFlag_fill_hole = (
+        iFlag_fill_hole
+        if iFlag_fill_hole is not None
+        else _get("iFlag_fill_hole", _get("fill_holes", _get("fill_hole", 0)))
     )
     _iFlag_mesh_boundary = (
         iFlag_mesh_boundary
@@ -500,6 +506,7 @@ def generate_mesh(
             nrow,
             _sFilename_mesh,
             resolved_wkt,
+            iFlag_fill_hole_in=bool(_iFlag_fill_hole),
         )
 
     elif mesh_type_name == "mpas":

@@ -71,6 +71,7 @@ def create_latlon_mesh(
     nrow_in: int,
     sFilename_output_in: str,
     pBoundary_in: Optional[str] = None,
+    iFlag_fill_hole_in: Union[bool, int] = False,
 ) -> List:
     """
     Create a rectangular latitude/longitude based mesh with cell topology and neighbor relationships.
@@ -303,19 +304,73 @@ def create_latlon_mesh(
     # ...............
 
     try:
+        # Pass 1: Determine active cells intersecting boundary
+        grid_active = np.zeros((nrow_in, ncolumn_in), dtype=bool)
+
         for iRow in range(1, nrow_in + 1):
             for iColumn in range(1, ncolumn_in + 1):
-                lCellID = (iRow - 1) * ncolumn_in + iColumn
-                # define a polygon here
                 x1 = xleft + ((iColumn - 1) * xspacing)
                 y1 = ybottom + ((iRow - 1) * yspacing)
-
                 x2 = xleft + ((iColumn) * xspacing)
                 y2 = ybottom + ((iRow - 1) * yspacing)
-
                 x3 = xleft + ((iColumn) * xspacing)
                 y3 = ybottom + ((iRow) * yspacing)
+                x4 = xleft + ((iColumn - 1) * xspacing)
+                y4 = ybottom + ((iRow) * yspacing)
 
+                ring = ogr.Geometry(ogr.wkbLinearRing)
+                ring.AddPoint(x1, y1)
+                ring.AddPoint(x2, y2)
+                ring.AddPoint(x3, y3)
+                ring.AddPoint(x4, y4)
+                ring.AddPoint(x1, y1)
+
+                pPolygon = ogr.Geometry(ogr.wkbPolygon)
+                pPolygon.AddGeometry(ring)
+
+                if (
+                    pBoundary is None
+                    or pPolygon.Within(pBoundary)
+                    or pPolygon.Intersects(pBoundary)
+                ):
+                    grid_active[iRow - 1, iColumn - 1] = True
+
+        # Hole filling pass
+        if iFlag_fill_hole_in:
+            try:
+                from scipy.ndimage import binary_fill_holes
+
+                grid_active = binary_fill_holes(grid_active)
+            except ImportError:
+                pass
+
+            # Fill single-cell boundary notches/pockets (cells with >= 3 cardinal neighbors)
+            for _ in range(2):
+                pad = np.pad(grid_active, 1, mode="constant", constant_values=False)
+                cardinal_neighbors = (
+                    pad[:-2, 1:-1].astype(int)
+                    + pad[2:, 1:-1].astype(int)
+                    + pad[1:-1, :-2].astype(int)
+                    + pad[1:-1, 2:].astype(int)
+                )
+                new_active = grid_active | (cardinal_neighbors >= 3)
+                if np.array_equal(new_active, grid_active):
+                    break
+                grid_active = new_active
+
+        # Pass 2: Generate cells and topology for active grid locations
+        for iRow in range(1, nrow_in + 1):
+            for iColumn in range(1, ncolumn_in + 1):
+                if not grid_active[iRow - 1, iColumn - 1]:
+                    continue
+
+                lCellID = (iRow - 1) * ncolumn_in + iColumn
+                x1 = xleft + ((iColumn - 1) * xspacing)
+                y1 = ybottom + ((iRow - 1) * yspacing)
+                x2 = xleft + ((iColumn) * xspacing)
+                y2 = ybottom + ((iRow - 1) * yspacing)
+                x3 = xleft + ((iColumn) * xspacing)
+                y3 = ybottom + ((iRow) * yspacing)
                 x4 = xleft + ((iColumn - 1) * xspacing)
                 y4 = ybottom + ((iRow) * yspacing)
 
@@ -343,37 +398,25 @@ def create_latlon_mesh(
                 dLongitude_center = np.mean(aCoords_gcs[0:4, 0])
                 dLatitude_center = np.mean(aCoords_gcs[0:4, 1])
 
-                iFlag = False
-                if pPolygon.Within(pBoundary):
-                    iFlag = True
-                else:
-                    # then check intersection
-                    if pPolygon.Intersects(pBoundary):
-                        iFlag = True
-                    else:
-                        pass
-
-                if iFlag == True:
-                    aLatlon, dArea = add_cell_into_list(
-                        aLatlon,
-                        lCellID,
-                        iRow,
-                        iColumn,
-                        dLongitude_center,
-                        dLatitude_center,
-                        aCoords_gcs,
-                    )
-                    # save feature
-                    pFeature.SetGeometry(pPolygon)
-                    pFeature.SetField("cellid", lCellID)
-                    pFeature.SetField("longitude", dLongitude_center)
-                    pFeature.SetField("latitude", dLatitude_center)
-                    pFeature.SetField("area", dArea)
-                    pLayer.CreateFeature(pFeature)
-                    # add to dictionary
-                    aLatlon_dict[lCellID] = lCellIndex
-                    lCellIndex = lCellIndex + 1
-                    pass
+                aLatlon, dArea = add_cell_into_list(
+                    aLatlon,
+                    lCellID,
+                    iRow,
+                    iColumn,
+                    dLongitude_center,
+                    dLatitude_center,
+                    aCoords_gcs,
+                )
+                # save feature
+                pFeature.SetGeometry(pPolygon)
+                pFeature.SetField("cellid", lCellID)
+                pFeature.SetField("longitude", dLongitude_center)
+                pFeature.SetField("latitude", dLatitude_center)
+                pFeature.SetField("area", dArea)
+                pLayer.CreateFeature(pFeature)
+                # add to dictionary
+                aLatlon_dict[lCellID] = lCellIndex
+                lCellIndex = lCellIndex + 1
     except Exception as e:
         print(f"Error processing mesh grid rows and columns: {e}")
         raise
